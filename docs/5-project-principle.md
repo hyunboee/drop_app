@@ -1,6 +1,6 @@
 # Drop 프로젝트 구조 설계 원칙
 
-> 출처: `1-domain-definition.md`(도메인 정의서 v0.9), `2-PRD.md`(PRD v0.9), `3-user-scenario.md`(시나리오 v0.4), `4-wireframes.md`(와이어프레임 v0.5), `.claude/skills/develop-backend`·`develop-frontend` SKILL. 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다. 스택 밖 최소 도구는 PRD 6장 "빌드·테스트 도구" 행으로 승인된 것만 쓴다. 결정 근거는 7장에 있다.
+> 출처: `1-domain-definition.md`(도메인 정의서 v0.9), `2-PRD.md`(PRD v1.0), `3-user-scenario.md`(시나리오 v0.4), `4-wireframes.md`(와이어프레임 v0.5), `8-plan.md`(실행 계획 v0.2), `.claude/skills/develop-backend`·`develop-frontend` SKILL. 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다. 스택 밖 최소 도구는 PRD 6장 "빌드·테스트 도구" 행으로 승인된 것만 쓴다. 결정 근거는 7장에 있다.
 
 ## 0. 변경 이력
 
@@ -11,6 +11,7 @@
 | 0.3 | 2026-10-01 | Claude Code | 아키텍처·ERD 결정 반영: PostgreSQL은 RDS 단일 인스턴스, 열람 확인 순서 401 → 404 → 422 → 403 확정, 로그인 잠금은 프로세스 메모리 카운터, 증명 ID 컬럼 미보유, 마이그레이션 이력 테이블 `schema_migrations`, 로그인 성공 시 만료 세션 삭제 |
 | 0.4 | 2026-10-01 | Claude Code | 문서 정합성 점검: 출처 문서 버전 갱신, 5.2 입력 검증에 heading 범위 추가(ERD 1.3 CHECK와 일치), 6.1 docs 목록에 아키텍처 다이어그램·ERD 추가 |
 | 0.5 | 2026-10-01 | Claude Code | 문서 정합성 점검 미정 사항 반영: 에러 코드 `MEDIA_FORBIDDEN` 추가, 열람 확인 순서에 400(입력 검증) 위치 확정 |
+| 0.6 | 2026-10-01 | Claude Code | 실행 계획(8-plan.md) 결정 반영: 계획 경로 `8-plan.md`, 개발 의존성 3개 추가, `GET /api/me`·`MEDIA_ALREADY_USED` 추가, 남은 거리 표시 올림, S3 CORS 범위, migrate 트랜잭션 방식, 스타일 가이드 `9-style-guide.md` |
 
 ---
 
@@ -69,14 +70,14 @@ api ──▶ lib
 | 라우터 라이브러리를 쓰지 않는다. 화면(W-01~W-12) 전환은 Zustand 상태로 한다. 홈·탭이 없고 화면 수가 적다 | PRD 6장, 7장, 와이어프레임 2장 |
 | `api/`는 `fetch` 하나를 감싼 클라이언트와 FR별 Query/Mutation 훅만 둔다. 401을 받으면 로그인 상태를 지우고 W-01로 보낸다 | FR-01, W-05 |
 | A-Frame·AR.js DOM 조작은 `ar/` 안에만 둔다. `ar/`은 로직 없는 얇은 장면 래퍼로, props로 받은 캡슐 목록을 그리고 탭 이벤트만 올려 보낸다. 거리·배치·표시 구분 계산은 `lib/`으로 뺀다. `api/`를 직접 부르지 않는다 | FR-09, PRD 6장, 4.3 |
-| `lib/`은 React·네트워크 의존이 없는 순수 함수만 둔다(남은 거리, 파일 사전 검사, JPEG 재인코딩·썸네일 크기 계산) | PRD 7장, FR-04 |
+| `lib/`은 React·네트워크 의존이 없는 순수 함수만 둔다(남은 거리, 파일 사전 검사, JPEG 재인코딩·썸네일 크기 계산). 남은 거리는 계산값 그대로 쓰고(서버 `remaining_m`도 계산값), 화면 표시만 정수 m로 올림(ceil)한다 | PRD 7장, FR-04, FR-10 |
 
 ### 2.3 의존성 추가 규칙
 
 | 규칙 | 근거 |
 |---|---|
 | 런타임 의존성은 PRD 6장 목록(`react`, `zustand`, `@tanstack/react-query`, A-Frame·AR.js npm 패키지, `express`(5), `pg`, 공식 AWS SDK의 S3·Rekognition·presigner 모듈)으로 한정한다 | PRD 6장 |
-| 개발 의존성은 PRD 6장 "빌드·테스트 도구" 행(Vite, Vitest, React Testing Library, jsdom, TypeScript)으로 한정한다. 백엔드 테스트는 Node 내장 기능만 쓴다 | PRD 6장 |
+| 개발 의존성은 PRD 6장 "빌드·테스트 도구" 행(Vite, Vitest, `@vitest/coverage-v8`, React Testing Library, jsdom, TypeScript, `@types/react`, `@types/react-dom`)으로 한정한다. 백엔드 테스트는 Node 내장 기능만 쓴다 | PRD 6장 |
 | AWS SDK는 필요한 서비스 모듈만 설치한다(전체 SDK 금지). A-Frame·AR.js도 npm으로 설치해 버전을 고정하고 CDN 스크립트를 쓰지 않는다 | PRD 6장 |
 | 몇 줄로 해결되는 기능(검증, 로그, 쿠키 파싱, 거리 계산)은 직접 작성한다 | P-06 |
 | 새 의존성은 사용자 승인 후, PRD 6장과 이 문서에 먼저 반영한 다음 설치한다 | PRD 6장 |
@@ -124,6 +125,7 @@ MVP 엔드포인트 (이 외에는 만들지 않는다)
 | 메서드·경로 | FR |
 |---|---|
 | `POST /api/auth/signup`, `POST /api/auth/login`, `POST /api/auth/logout` | FR-01 |
+| `GET /api/me` (세션 쿠키로 현재 사용자 `{ id, email }` 200, 없으면 401. 앱 시작 시 W-01/W-03 분기) | FR-01 |
 | `POST /api/uploads` (원본·썸네일 Presigned URL 발급) | FR-04 |
 | `GET /api/media/:mediaId` (원본, 열람 기록 또는 소유자만), `GET /api/media/:mediaId/thumb` (썸네일) | FR-08, FR-10, NFR-05, NFR-08 |
 | `POST /api/capsules` (검열 + 게시) | FR-06, FR-07 |
@@ -146,6 +148,7 @@ MVP 엔드포인트 (이 외에는 만들지 않는다)
 | `OUT_OF_RANGE` | 403 (`remaining_m` 포함) | FR-10, NFR-08 |
 | `MODERATION_REJECTED` | 422 | FR-06, M-14 |
 | `MODERATION_UNAVAILABLE` | 503 | FR-06, M-09 |
+| `MEDIA_ALREADY_USED` | 409 | FR-06 (다른 유저의 캡슐이 이미 그 `media_id`를 씀. 같은 유저의 재요청은 기존 캡슐을 200으로 반환) |
 | `NOT_OWNER` | 403 | FR-11 |
 | `MEDIA_FORBIDDEN` | 403 | FR-10, NFR-08 (열람 기록 없는 원본 요청) |
 | `CAPSULE_NOT_FOUND` | 404 | FR-10, FR-11 |
@@ -186,7 +189,7 @@ MVP 엔드포인트 (이 외에는 만들지 않는다)
 | 구분 | 방식 | 대상 |
 |---|---|---|
 | 러너 | Vitest + React Testing Library + jsdom | — |
-| 단위 | `lib/`, `stores/` | 남은 거리 `max(0, d − min(accuracy, PRM-03) − PRM-01)`(PRD 7장), 열람 가능/불가 프레임 구분, 파일 사전 검사(FR-04, M-06), 재인코딩·썸네일 크기 계산(M-13, M-07) |
+| 단위 | `lib/`, `stores/` | 남은 거리 `max(0, d − min(accuracy, PRM-03) − PRM-01)`(PRD 7장, 계산값 그대로)와 표시용 정수 m 올림(ceil), 열람 가능/불가 프레임 구분, 파일 사전 검사(FR-04, M-06), 재인코딩·썸네일 크기 계산(M-13, M-07) |
 | 컴포넌트 | `fetch` 대체 | 가입 버튼 활성 조건(필수 동의 3개, M-10), 로그인 실패·잠금 메시지(FR-01), 권한 거부 화면(FR-02), 드롭 시트 단계·재시도(W-07~W-10), 정확도 배너(PRD 7장), 열람·404 안내(W-11, W-12), 소유자만 삭제 버튼(FR-11), 401 시 W-01 이동 |
 | 공통 공식 | 거리·판정식은 백·프론트가 따로 구현하므로 같은 입력·기대값 표로 양쪽을 테스트한다 | PRD 7장, NFR-08 |
 | 커버리지 제외 | `ar/`의 A-Frame 장면 래퍼만 제외한다. jsdom에서 렌더링할 수 없으므로 로직을 두지 않고 실기기 체크리스트(4.4)로 검증한다 | NFR-09 |
@@ -195,7 +198,7 @@ MVP 엔드포인트 (이 외에는 만들지 않는다)
 
 | 규칙 | 근거 |
 |---|---|
-| 실기기 테스트: 배포 환경(5.2)에서 iOS Safari·Android Chrome 실기기로 드롭→열람 전 흐름, AR 프레임 표시·탭, 재방문 표시율, 재열람 시 브라우저 캐시 사용을 확인하고 결과를 실행 계획 문서(`docs/5-plan.md`)의 완료 조건에 기록한다 | NFR-09, PRD 1.3, NFR-05 |
+| 실기기 테스트: 배포 환경(5.2)에서 iOS Safari·Android Chrome 실기기로 드롭→열람 전 흐름, AR 프레임 표시·탭, 재방문 표시율, 재열람 시 브라우저 캐시 사용을 확인하고 결과를 실행 계획 문서(`docs/8-plan.md`)의 완료 조건에 기록한다 | NFR-09, PRD 1.3, NFR-05 |
 | 부하 테스트: 캡슐 시드를 SQL(`generate_series`)로 넣고, 내장 `fetch`를 쓰는 Node 스크립트로 주변 조회·열람 API의 p95·오류율과 DB 커넥션 수를 측정한다. MVP 완료 직후 첫 작업으로 한다 | NFR-01, NFR-02, NFR-04, PRD 8장 |
 
 ---
@@ -223,6 +226,7 @@ MVP 엔드포인트 (이 외에는 만들지 않는다)
 | 모든 입력은 route에서 형식·범위를 직접 검증한다(검증 라이브러리 없음). 위경도·accuracy·heading 범위, 제목 길이(M-11), 등급, 파일 크기(M-06) | FR-04, FR-07, P-06 |
 | 사진은 브라우저가 Canvas로 JPEG 재인코딩(긴 변 M-13)해 원본으로 올리고, 썸네일(M-07)도 JPEG로 만든다. EXIF(GPS 포함)는 재인코딩으로 제거된다 | FR-04, PRV-07 |
 | S3 버킷은 비공개이고 브라우저에 S3 URL을 주지 않는다. 키는 서버가 캡슐 미디어마다 발급한 UUID(`mediaId`)로 정하며(원본 `media/{mediaId}.jpg`, 썸네일 `media/{mediaId}.thumb.jpg`) 재사용하지 않는다. 업로드 Presigned URL(M-03, 짧은 유효 시간이라 EC2 인스턴스 역할의 임시 자격 증명으로 충분)에는 `Content-Type: image/jpeg`, `status=pending` 태그, `If-None-Match: *`(조건부 쓰기)를 서명해 같은 키의 두 번째 PUT이 412로 실패하게 한다(검열 후 바꿔치기 차단) | NFR-05, NFR-07, FR-04, M-08 |
+| S3 버킷 CORS는 AllowedOrigins = 서비스 도메인 하나, AllowedMethods = `PUT`, AllowedHeaders = Presigned URL에 서명된 헤더만(`Content-Type`, `If-None-Match`, `x-amz-tagging`)으로 둔다 | FR-04, NFR-07 |
 | 게시 시 서버가 `HeadObject`로 크기·형식을 다시 확인하고, Rekognition은 S3 원본·썸네일을 직접 참조해 M-14 기준, M-09 제한 시간으로 검사한다. 둘 다 통과하면 태그 제거 → 캡슐 행 생성 순서로 처리한다(행이 있는데 객체가 지워지는 일 방지). 거부(422)·실패(503) 시 행을 만들지 않는다 | FR-04, FR-06, BR-33 |
 | 읽기는 Express 프록시(`GET /api/media/:mediaId`, `/thumb`)로만 한다. 둘 다 세션 쿠키가 필요하다. 원본은 그 뷰어의 해당 캡슐 열람 기록이 있거나 소유자일 때만 200, 아니면 403이다(FR-10 판정 통과자만 원본을 받음, SQL 한 줄 확인). 만료·삭제 캡슐이면 404다 | NFR-08, FR-10 |
 | 미디어 응답은 `Cache-Control: private, max-age=31536000, immutable`로 준다. URL이 영구히 같아 재열람 시 브라우저 캐시를 쓰고, `private`이라 Cloudflare 등 공유 캐시는 저장하지 않는다(권한 우회 방지) | NFR-05, NFR-06 |
@@ -239,7 +243,7 @@ MVP 엔드포인트 (이 외에는 만들지 않는다)
 | 500 응답에는 내부 메시지·스택을 담지 않고 `INTERNAL_ERROR`만 준다. 상세는 서버 로그에만 남긴다 | NFR-07 |
 | 헬스 체크 `GET /api/health`는 `SELECT 1` 성공 여부만 반환한다. 메트릭 수집·APM은 두지 않는다 | P-01 |
 | Cloudflare 프록시 뒤에서 실행하므로 Express `trust proxy`를 설정해 실제 클라이언트 IP로 해시를 만든다 | FR-10, INV-06 |
-| 마이그레이션은 번호 붙은 `.sql` 파일을 순서대로 적용하는 `scripts/migrate.js`로 실행하고, 적용 이력을 `schema_migrations(filename text PK, applied_at timestamptz NOT NULL DEFAULT now())` 테이블에 남긴다. 이미 적용한 파일은 고치지 않고 새 번호로 추가한다 | P-06 |
+| 마이그레이션은 번호 붙은 `.sql` 파일(`db/migrations/`)을 순서대로 적용하는 `scripts/migrate.js`로 실행하고, 적용 이력을 `schema_migrations(filename text PK, applied_at timestamptz NOT NULL DEFAULT now())` 테이블에 남긴다. `migrate.js`는 시작 시 이 테이블을 `CREATE TABLE IF NOT EXISTS`로 만들고, 파일 실행과 이력 INSERT를 한 트랜잭션으로 묶는다(파일 안에는 `BEGIN/COMMIT`을 두지 않음). `001_init.sql`은 `docs/schema.sql`을 그대로 복사한 것이다. 이미 적용한 파일은 고치지 않고 새 번호로 추가한다 | P-06 |
 
 ---
 
@@ -251,7 +255,7 @@ MVP FR(FR-01~11)에 필요한 것만 둔다. 후속 단계용 디렉토리는 �
 
 ```
 drop_app/
-├── docs/        # 도메인 정의서, PRD, 시나리오, 와이어프레임, 이 문서, 아키텍처 다이어그램, ERD, 실행 계획(5-plan.md), 스타일 가이드(프론트 개발 전 작성)
+├── docs/        # 도메인 정의서, PRD, 시나리오, 와이어프레임, 이 문서, 아키텍처 다이어그램, ERD, 실행 계획(8-plan.md), 스타일 가이드(9-style-guide.md, 실행 계획 FE-00)
 ├── frontend/    # React 웹앱 + WebAR
 └── backend/     # Express API 서버 (프론트 dist도 서빙)
 ```
@@ -339,4 +343,4 @@ v0.1의 확인 필요 21건을 아래와 같이 결정했다.
 | 18 | 풀 크기 | `DB_POOL_MAX` 기본 10(pg 기본값), 부하 테스트로 조정 | 5.1 |
 | 19 | 열람 기록 IP | 원문 저장 금지, 서버 비밀값 HMAC-SHA256 해시 | PRD FR-10, 3.2, 5.2 |
 | 20 | 삭제 시 S3 객체 | FR-11 삭제 시 원본·썸네일 `DeleteObject`. 만료 캡슐 객체는 후속 정리 | PRD FR-11, 5.2 |
-| 21 | 문서 번호·스타일 가이드 | 이 문서는 `5-project-principle.md` 유지, 실행 계획은 `docs/5-plan.md`로 별도 작성(같은 접두어 공존). 스타일 가이드는 프론트 개발 전에 별도 문서로 작성 | 6.1, 4.4 |
+| 21 | 문서 번호·스타일 가이드 | 이 문서는 `5-project-principle.md` 유지, 실행 계획은 `docs/8-plan.md`로 별도 작성. 스타일 가이드는 프론트 UI 개발 전에 `docs/9-style-guide.md`로 작성(실행 계획 FE-00) | 6.1, 4.4 |
