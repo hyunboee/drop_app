@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844" font-family="'Noto Serif KR', 'Nanum Myeongjo', Georgia, serif">
+  <title>W-01 로그인 — Drop (고서 동판화 스타일)</title>
+  <defs>
+    <!-- 오래된 종이: 바탕색 + 섬유 결 + 얼룩 -->
+    <filter id="paper" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="7" result="grain"/>
+      <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0.35  0 0 0 0 0.27  0 0 0 0 0.16  0 0 0 0.10 0" result="grainTint"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="3" result="stain"/>
+      <feColorMatrix in="stain" type="matrix" values="0 0 0 0 0.45  0 0 0 0 0.32  0 0 0 0 0.15  0 0 0 0.22 -0.06" result="stainTint"/>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="stainTint"/><feMergeNode in="grainTint"/></feMerge>
+    </filter>
+    <radialGradient id="edgeBurn" cx="0.5" cy="0.5" r="0.72">
+      <stop offset="0.62" stop-color="#5b4122" stop-opacity="0"/>
+      <stop offset="1" stop-color="#5b4122" stop-opacity="0.42"/>
+    </radialGradient>
+    <!-- 잉크 번짐: 동판화 선을 살짝 거칠게 -->
+    <filter id="ink" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="1" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="0.9"/>
+    </filter>
+    <!-- 해칭(음영 선) -->
+    <pattern id="hatch" width="3" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+      <line x1="0" y1="0" x2="0" y2="3" stroke="#3b2c1c" stroke-width="0.7"/>
+    </pattern>
+    <pattern id="hatchDense" width="2.2" height="2.2" patternUnits="userSpaceOnUse" patternTransform="rotate(-40)">
+      <line x1="0" y1="0" x2="0" y2="2.2" stroke="#2e2114" stroke-width="0.8"/>
+    </pattern>
+    <pattern id="hatchV" width="2.6" height="4" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="0" y2="4" stroke="#3b2c1c" stroke-width="0.6"/>
+    </pattern>
+    <clipPath id="plate"><rect x="46" y="150" width="298" height="292"/></clipPath>
+  </defs>
+
+  <!-- 종이 -->
+  <rect width="390" height="844" fill="#e8dcc0" filter="url(#paper)"/>
+  <rect width="390" height="844" fill="url(#edgeBurn)"/>
+
+  <!-- 이중 괘선 테두리 -->
+  <rect x="16" y="16" width="358" height="812" fill="none" stroke="#3a2b1b" stroke-width="1.4"/>
+  <rect x="21" y="21" width="348" height="802" fill="none" stroke="#3a2b1b" stroke-width="0.5"/>
+
+  <!-- 머리말 -->
+  <text x="195" y="58" font-size="9.5" fill="#4a3824" text-anchor="middle" letter-spacing="4" font-family="'Cormorant Garamond', 'EB Garamond', Garamond, Georgia, serif">TEMPORIS · CUSTOS</text>
+  <line x1="120" y1="68" x2="270" y2="68" stroke="#3a2b1b" stroke-width="0.5"/>
+
+  <!-- 제호 -->
+  <text x="195" y="116" font-size="46" fill="#2a1e12" text-anchor="middle" letter-spacing="12" font-family="'Cormorant Garamond', 'EB Garamond', Garamond, 'Times New Roman', serif">DROP</text>
+  <text x="195" y="137" font-size="11" fill="#4a3824" text-anchor="middle" font-style="italic" letter-spacing="1">그 자리에 가야만 열리는 기억</text>
+
+  <!-- 동판화 삽화: 도서관 아치와 캡슐 -->
+  <g filter="url(#ink)">
+    <rect x="46" y="150" width="298" height="292" fill="none" stroke="#2e2114" stroke-width="1"/>
+    <g clip-path="url(#plate)">
+      <!-- 벽면 음영 -->
+      <rect x="46" y="150" width="298" height="292" fill="url(#hatch)" opacity="0.45"/>
+      <!-- 아치 개구부 (빛, 비워 둠) -->
+      <path d="M135 442 V258 A60 60 0 0 1 255 258 V442 Z" fill="#e8dcc0"/>
+      <path d="M135 442 V258 A60 60 0 0 1 255 258 V442" fill="none" stroke="#2e2114" stroke-width="1.2"/>
+      <path d="M125 442 V256 A70 70 0 0 1 265 256 V442" fill="none" stroke="#2e2114" stroke-width="0.8"/>
+      <!-- 아치 돌 -->
+      <g stroke="#2e2114" stroke-width="0.6">
+        <line x1="195" y1="186" x2="195" y2="198"/>
+        <line x1="160" y1="196" x2="165" y2="206"/><line x1="230" y1="196" x2="225" y2="206"/>
+        <line x1="138" y1="220" x2="146" y2="226"/><line x1="252" y1="220" x2="244" y2="226"/>
+      </g>
+      <!-- 창살 -->
+      <g stroke="#2e2114" stroke-width="0.7" opacity="0.8">
+        <line x1="195" y1="200" x2="195" y2="330"/>
+        <line x1="165" y1="212" x2="165" y2="330"/><line x1="225" y1="212" x2="225" y2="330"/>
+        <line x1="140" y1="262" x2="250" y2="262"/><line x1="138" y1="298" x2="252" y2="298"/>
+        <line x1="136" y1="330" x2="254" y2="330"/>
+      </g>
+      <!-- 좌우 서가 (세로 해칭으로 책등) -->
+      <rect x="56" y="250" width="62" height="192" fill="url(#hatchV)" opacity="0.8"/>
+      <rect x="272" y="250" width="62" height="192" fill="url(#hatchV)" opacity="0.8"/>
+      <g stroke="#2e2114" stroke-width="1">
+        <rect x="56" y="250" width="62" height="192" fill="none"/>
+        <rect x="272" y="250" width="62" height="192" fill="none"/>
+        <line x1="56" y1="298" x2="118" y2="298"/><line x1="56" y1="346" x2="118" y2="346"/><line x1="56" y1="394" x2="118" y2="394"/>
+        <line x1="272" y1="298" x2="334" y2="298"/><line x1="272" y1="346" x2="334" y2="346"/><line x1="272" y1="394" x2="334" y2="394"/>
+      </g>
+      <!-- 바닥 원근선 -->
+      <g stroke="#2e2114" stroke-width="0.5" opacity="0.7">
+        <line x1="46" y1="420" x2="344" y2="420"/>
+        <line x1="195" y1="420" x2="80" y2="442"/><line x1="195" y1="420" x2="130" y2="442"/>
+        <line x1="195" y1="420" x2="260" y2="442"/><line x1="195" y1="420" x2="310" y2="442"/>
+        <line x1="46" y1="430" x2="344" y2="430"/>
+      </g>
+      <!-- 대좌 -->
+      <rect x="168" y="396" width="54" height="26" fill="#e8dcc0" stroke="#2e2114" stroke-width="1"/>
+      <rect x="200" y="396" width="22" height="26" fill="url(#hatch)"/>
+      <line x1="164" y1="396" x2="226" y2="396" stroke="#2e2114" stroke-width="1.2"/>
+      <!-- 캡슐 (원통) : 오른쪽을 촘촘한 해칭으로 음영 -->
+      <path d="M176 396 V318 A19 6 0 0 1 214 318 V396 A19 6 0 0 1 176 396 Z" fill="#e8dcc0" stroke="#2e2114" stroke-width="1"/>
+      <path d="M200 312 V398 A19 6 0 0 0 214 396 V318 A19 6 0 0 0 200 312 Z" fill="url(#hatchDense)"/>
+      <ellipse cx="195" cy="318" rx="19" ry="6" fill="#e8dcc0" stroke="#2e2114" stroke-width="1"/>
+      <path d="M176 334 A19 6 0 0 0 214 334 M176 380 A19 6 0 0 0 214 380" fill="none" stroke="#2e2114" stroke-width="0.6"/>
+      <!-- 뚜껑 -->
+      <path d="M179 318 V308 A16 5 0 0 1 211 308 V318" fill="#e8dcc0" stroke="#2e2114" stroke-width="1"/>
+      <ellipse cx="195" cy="308" rx="16" ry="5" fill="#e8dcc0" stroke="#2e2114" stroke-width="0.9"/>
+    </g>
+  </g>
+  <text x="195" y="458" font-size="8" fill="#4a3824" text-anchor="middle" font-style="italic" letter-spacing="1.5">Fig. I — 기억을 담는 함(函)</text>
+
+  <!-- 장식 괘선 -->
+  <g stroke="#3a2b1b" fill="none">
+    <line x1="60" y1="486" x2="176" y2="486" stroke-width="0.6"/>
+    <line x1="214" y1="486" x2="330" y2="486" stroke-width="0.6"/>
+    <path d="M187 486 L195 480 L203 486 L195 492 Z" stroke-width="0.8"/>
+    <circle cx="195" cy="486" r="1.4" fill="#3a2b1b"/>
+  </g>
+
+  <!-- ① 이메일 (장부식 밑줄 입력란) -->
+  <text x="56" y="526" font-size="10" fill="#4a3824" letter-spacing="2">이메일</text>
+  <text x="56" y="556" font-size="14" fill="#8a7658" font-style="italic">you@example.com</text>
+  <line x1="56" y1="566" x2="334" y2="566" stroke="#2e2114" stroke-width="0.9"/>
+
+  <!-- ② 비밀번호 -->
+  <text x="56" y="600" font-size="10" fill="#4a3824" letter-spacing="2">비밀번호</text>
+  <text x="56" y="630" font-size="14" fill="#8a7658" letter-spacing="4">••••••••</text>
+  <line x1="56" y1="640" x2="334" y2="640" stroke="#2e2114" stroke-width="0.9"/>
+
+  <!-- ③ 오류 메시지 영역 (주서: 붉은 잉크) -->
+  <text x="56" y="666" font-size="11" fill="#7a2418" font-style="italic">※ 이메일 또는 비밀번호가 올바르지 않습니다.</text>
+
+  <!-- ④ 로그인 버튼 (활판 인쇄 느낌의 먹색 판) -->
+  <rect x="56" y="688" width="278" height="46" fill="#2a1e12"/>
+  <rect x="60" y="692" width="270" height="38" fill="none" stroke="#c9b48c" stroke-width="0.6"/>
+  <text x="195" y="716" font-size="14" fill="#efe4c9" text-anchor="middle" letter-spacing="8">로그인</text>
+
+  <!-- ⑤ 가입 링크 -->
+  <text x="195" y="770" font-size="11.5" fill="#4a3824" text-anchor="middle">계정이 없으신가요? <tspan font-style="italic" text-decoration="underline" fill="#2a1e12">가입하기</tspan></text>
+
+  <!-- 판권 -->
+  <text x="195" y="806" font-size="8" fill="#6a5538" text-anchor="middle" letter-spacing="3" font-family="'Cormorant Garamond', Garamond, Georgia, serif">MMXXVI</text>
+</svg>
