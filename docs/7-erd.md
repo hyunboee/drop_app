@@ -1,6 +1,6 @@
 # Drop ERD
 
-> 출처: `1-domain-definition.md`(도메인 정의서 v0.7), `2-PRD.md`(PRD v0.7), `3-user-scenario.md`(시나리오 v0.3), `4-wireframes.md`(와이어프레임 v0.3), `5-project-principle.md`(프로젝트 원칙 v0.3), `6-arch-diagram.md`(아키텍처 v0.2). 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
+> 출처: `1-domain-definition.md`(도메인 정의서 v0.9), `2-PRD.md`(PRD v0.9), `3-user-scenario.md`(시나리오 v0.4), `4-wireframes.md`(와이어프레임 v0.5), `5-project-principle.md`(프로젝트 원칙 v0.5), `6-arch-diagram.md`(아키텍처 v0.4). 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
 
 ## 변경 이력
 
@@ -8,6 +8,7 @@
 |---|---|---|---|
 | 0.1 | 2026-10-01 | Claude Code | 초안 작성 |
 | 0.2 | 2026-10-01 | Claude Code | 확인 필요 8건 결정 반영: 잠금 컬럼 삭제(메모리 카운터), 증명 ID 컬럼 삭제, `users.terms_version` 추가, 운영용 테이블 `schema_migrations`, 로그인 성공 시 만료 세션 삭제, 3장을 결정 내역으로 변경 |
+| 0.3 | 2026-10-01 | Claude Code | 문서 정합성 점검: 출처 문서 버전을 최신(도메인 v0.8, PRD v0.8, 시나리오 v0.4, 와이어프레임 v0.4, 원칙 v0.4, 아키텍처 v0.3)으로 갱신 |
 
 ---
 

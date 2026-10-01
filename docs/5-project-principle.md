@@ -1,6 +1,6 @@
 # Drop 프로젝트 구조 설계 원칙
 
-> 출처: `1-domain-definition.md`(도메인 정의서 v0.7), `2-PRD.md`(PRD v0.7), `3-user-scenario.md`(시나리오 v0.3), `4-wireframes.md`(와이어프레임 v0.3), `.claude/skills/develop-backend`·`develop-frontend` SKILL. 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다. 스택 밖 최소 도구는 PRD 6장 "빌드·테스트 도구" 행으로 승인된 것만 쓴다. 결정 근거는 7장에 있다.
+> 출처: `1-domain-definition.md`(도메인 정의서 v0.9), `2-PRD.md`(PRD v0.9), `3-user-scenario.md`(시나리오 v0.4), `4-wireframes.md`(와이어프레임 v0.5), `.claude/skills/develop-backend`·`develop-frontend` SKILL. 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다. 스택 밖 최소 도구는 PRD 6장 "빌드·테스트 도구" 행으로 승인된 것만 쓴다. 결정 근거는 7장에 있다.
 
 ## 0. 변경 이력
 
@@ -9,6 +9,8 @@
 | 0.1 | 2026-10-01 | Claude Code | 초안 작성 |
 | 0.2 | 2026-10-01 | Claude Code | 확인 필요 21건 결정 반영: 빌드·테스트 도구 확정, 세션 쿠키, EC2+Cloudflare 배포, UUID S3 키와 조건부 쓰기, JPEG 재인코딩, 원본·썸네일 검열(M-14), IP 해시, 7장을 결정 내역으로 변경. 읽기 Presigned URL(M-12)안을 폐기하고 Express 미디어 프록시(`/api/media/:mediaId`, 열람 기록 확인, `private` 캐시)로 대체 |
 | 0.3 | 2026-10-01 | Claude Code | 아키텍처·ERD 결정 반영: PostgreSQL은 RDS 단일 인스턴스, 열람 확인 순서 401 → 404 → 422 → 403 확정, 로그인 잠금은 프로세스 메모리 카운터, 증명 ID 컬럼 미보유, 마이그레이션 이력 테이블 `schema_migrations`, 로그인 성공 시 만료 세션 삭제 |
+| 0.4 | 2026-10-01 | Claude Code | 문서 정합성 점검: 출처 문서 버전 갱신, 5.2 입력 검증에 heading 범위 추가(ERD 1.3 CHECK와 일치), 6.1 docs 목록에 아키텍처 다이어그램·ERD 추가 |
+| 0.5 | 2026-10-01 | Claude Code | 문서 정합성 점검 미정 사항 반영: 에러 코드 `MEDIA_FORBIDDEN` 추가, 열람 확인 순서에 400(입력 검증) 위치 확정 |
 
 ---
 
@@ -145,6 +147,7 @@ MVP 엔드포인트 (이 외에는 만들지 않는다)
 | `MODERATION_REJECTED` | 422 | FR-06, M-14 |
 | `MODERATION_UNAVAILABLE` | 503 | FR-06, M-09 |
 | `NOT_OWNER` | 403 | FR-11 |
+| `MEDIA_FORBIDDEN` | 403 | FR-10, NFR-08 (열람 기록 없는 원본 요청) |
 | `CAPSULE_NOT_FOUND` | 404 | FR-10, FR-11 |
 | `INTERNAL_ERROR` | 500 | — |
 
@@ -217,7 +220,7 @@ MVP 엔드포인트 (이 외에는 만들지 않는다)
 | 비밀번호는 `crypto.scrypt` + 사용자별 랜덤 salt로 저장하고 `timingSafeEqual`로 비교한다 | FR-01, Q-05 |
 | 세션 토큰은 `crypto.randomBytes`로 만들고 DB `sessions`에는 SHA-256 해시를 저장한다. 토큰은 `HttpOnly; Secure; SameSite=Strict` 쿠키로만 전달하고(JS·`localStorage`에 두지 않음), 쿠키는 `req.headers.cookie`를 직접 파싱한다. 유효 기간은 M-04, 로그아웃 시 행을 삭제하고 쿠키를 지운다. 세션 조회는 항상 `expires_at > now()` 조건을 붙이고, 만료 세션은 배치 없이 로그인 성공 시 `DELETE FROM sessions WHERE user_id = $1 AND expires_at < now()`로 지운다 | FR-01, Q-05 |
 | 로그인 실패는 계정 존재 여부와 관계없이 같은 메시지로 응답하고, M-05로 잠근다(429). 실패 횟수는 Express 프로세스 메모리의 `Map`(키: 소문자 이메일, 가입 여부와 무관하게 똑같이 셈)에 두어 미가입 이메일도 같은 조건에서 429가 나온다. ponytail: 단일 인스턴스 메모리 카운터라 재시작 시 초기화된다, 인스턴스가 늘면 DB 테이블로 옮긴다 | FR-01, M-05 |
-| 모든 입력은 route에서 형식·범위를 직접 검증한다(검증 라이브러리 없음). 위경도·accuracy 범위, 제목 길이(M-11), 등급, 파일 크기(M-06) | FR-04, FR-07, P-06 |
+| 모든 입력은 route에서 형식·범위를 직접 검증한다(검증 라이브러리 없음). 위경도·accuracy·heading 범위, 제목 길이(M-11), 등급, 파일 크기(M-06) | FR-04, FR-07, P-06 |
 | 사진은 브라우저가 Canvas로 JPEG 재인코딩(긴 변 M-13)해 원본으로 올리고, 썸네일(M-07)도 JPEG로 만든다. EXIF(GPS 포함)는 재인코딩으로 제거된다 | FR-04, PRV-07 |
 | S3 버킷은 비공개이고 브라우저에 S3 URL을 주지 않는다. 키는 서버가 캡슐 미디어마다 발급한 UUID(`mediaId`)로 정하며(원본 `media/{mediaId}.jpg`, 썸네일 `media/{mediaId}.thumb.jpg`) 재사용하지 않는다. 업로드 Presigned URL(M-03, 짧은 유효 시간이라 EC2 인스턴스 역할의 임시 자격 증명으로 충분)에는 `Content-Type: image/jpeg`, `status=pending` 태그, `If-None-Match: *`(조건부 쓰기)를 서명해 같은 키의 두 번째 PUT이 412로 실패하게 한다(검열 후 바꿔치기 차단) | NFR-05, NFR-07, FR-04, M-08 |
 | 게시 시 서버가 `HeadObject`로 크기·형식을 다시 확인하고, Rekognition은 S3 원본·썸네일을 직접 참조해 M-14 기준, M-09 제한 시간으로 검사한다. 둘 다 통과하면 태그 제거 → 캡슐 행 생성 순서로 처리한다(행이 있는데 객체가 지워지는 일 방지). 거부(422)·실패(503) 시 행을 만들지 않는다 | FR-04, FR-06, BR-33 |
@@ -225,7 +228,7 @@ MVP 엔드포인트 (이 외에는 만들지 않는다)
 | 미디어 응답은 `Cache-Control: private, max-age=31536000, immutable`로 준다. URL이 영구히 같아 재열람 시 브라우저 캐시를 쓰고, `private`이라 Cloudflare 등 공유 캐시는 저장하지 않는다(권한 우회 방지) | NFR-05, NFR-06 |
 | FR-11 삭제 시 원본·썸네일 S3 객체를 `DeleteObject`로 지운다(키 공유 없음). 만료 캡슐 객체는 MVP에서 남겨 두고 후속에서 정리한다 | FR-11 |
 | 열람 기록 IP는 `IP_HASH_SECRET`으로 HMAC-SHA256 해시해 저장한다(같은 IP 비교만 필요) | FR-10, PRV-04 |
-| 열람 판정·만료(`expires_at > now()`)·상태·소유자 확인은 SQL·서비스에서 매 요청 다시 한다. 열람 요청 확인 순서는 401 → 404 → 422 → 403으로 확정한다(존재하지 않는 캡슐에 정확도 안내를 먼저 하지 않음) | NFR-08, FR-08, FR-10, FR-11 |
+| 열람 판정·만료(`expires_at > now()`)·상태·소유자 확인은 SQL·서비스에서 매 요청 다시 한다. 열람 요청 확인 순서는 401 → 400 → 404 → 422 → 403으로 확정한다(존재하지 않는 캡슐에 정확도 안내를 먼저 하지 않음) | NFR-08, FR-08, FR-10, FR-11 |
 
 ### 5.3 운영 (최소)
 
@@ -248,7 +251,7 @@ MVP FR(FR-01~11)에 필요한 것만 둔다. 후속 단계용 디렉토리는 �
 
 ```
 drop_app/
-├── docs/        # 도메인 정의서, PRD, 시나리오, 와이어프레임, 이 문서, 실행 계획(5-plan.md), 스타일 가이드(프론트 개발 전 작성)
+├── docs/        # 도메인 정의서, PRD, 시나리오, 와이어프레임, 이 문서, 아키텍처 다이어그램, ERD, 실행 계획(5-plan.md), 스타일 가이드(프론트 개발 전 작성)
 ├── frontend/    # React 웹앱 + WebAR
 └── backend/     # Express API 서버 (프론트 dist도 서빙)
 ```

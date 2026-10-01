@@ -1,6 +1,6 @@
 # Drop 기술 아키텍처 다이어그램
 
-> 출처: `1-domain-definition.md`(도메인 정의서 v0.7), `2-PRD.md`(PRD v0.7), `3-user-scenario.md`(시나리오 v0.3), `4-wireframes.md`(와이어프레임 v0.3), `5-project-principle.md`(프로젝트 원칙 v0.3). MVP(PRD 3.1) 기준이며, 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
+> 출처: `1-domain-definition.md`(도메인 정의서 v0.9), `2-PRD.md`(PRD v0.9), `3-user-scenario.md`(시나리오 v0.4), `4-wireframes.md`(와이어프레임 v0.5), `5-project-principle.md`(프로젝트 원칙 v0.5). MVP(PRD 3.1) 기준이며, 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
 
 ## 변경 이력
 
@@ -8,6 +8,8 @@
 |---|---|---|---|
 | 0.1 | 2026-10-01 | Claude Code | 초안 작성 |
 | 0.2 | 2026-10-01 | Claude Code | 확인 필요 결정 반영: PostgreSQL을 RDS 단일 인스턴스로 표기, 열람 확인 순서 확정, 열람 기록의 증명 ID 컬럼 제거, 4장을 결정 내역으로 변경 |
+| 0.3 | 2026-10-01 | Claude Code | 문서 정합성 점검: 출처 문서 버전을 최신(도메인 v0.8, PRD v0.8, 시나리오 v0.4, 와이어프레임 v0.4, 원칙 v0.4)으로 갱신 |
+| 0.4 | 2026-10-01 | Claude Code | 문서 정합성 점검 미정 사항 반영: 2.2에 400 입력 검증 단계 추가, 2.3의 403에 `MEDIA_FORBIDDEN` 코드 표기 |
 
 ---
 
@@ -94,14 +96,16 @@ sequenceDiagram
 
 ### 2.2 캡슐 열람: 서버 판정
 
-열람 요청마다 서버가 캡슐 상태·만료와 GPS 거리 판정을 다시 하고, 통과한 경우에만 열람 기록을 남기고 원본 경로를 돌려준다. MVP는 별도 현장 증명을 발급하지 않고 GPS 판정만 한다(Q-11). 확인 순서는 401 → 404 → 422 → 403으로 확정했다(존재하지 않는 캡슐에 정확도 안내를 먼저 하지 않음, 4장 A5).
+열람 요청마다 서버가 캡슐 상태·만료와 GPS 거리 판정을 다시 하고, 통과한 경우에만 열람 기록을 남기고 원본 경로를 돌려준다. MVP는 별도 현장 증명을 발급하지 않고 GPS 판정만 한다(Q-11). 확인 순서는 401 → 400 → 404 → 422 → 403으로 확정했다(존재하지 않는 캡슐에 정확도 안내를 먼저 하지 않음, 4장 A5).
 근거: FR-10, BR-27, 도메인 5.4, NFR-08, PRM-01, PRM-03, Q-03, Q-11, PRV-04, 원칙 3.3
 
 ```mermaid
 flowchart TD
   req["POST /api/capsules/:id/open<br/>lat, lng, accuracy"] --> auth{"세션 쿠키 유효?"}
   auth -->|"아니오"| e401["401 AUTH_REQUIRED"]
-  auth -->|"예"| found{"status = ACTIVE<br/>그리고 expires_at > now()?"}
+  auth -->|"예"| valid{"위경도·accuracy 형식·범위 유효?"}
+  valid -->|"아니오"| e400["400 VALIDATION_FAILED"]
+  valid -->|"예"| found{"status = ACTIVE<br/>그리고 expires_at > now()?"}
   found -->|"아니오"| e404["404 CAPSULE_NOT_FOUND<br/>클라이언트: 안내 후 주변 재조회"]
   found -->|"예"| acc{"accuracy ≤ 재측정 기준 PRM-03?"}
   acc -->|"아니오"| e422["422 LOW_ACCURACY<br/>판정하지 않고 재측정 안내"]
@@ -126,7 +130,7 @@ flowchart TD
   cap -->|"예"| kind{"요청 종류"}
   kind -->|"썸네일"| stream
   kind -->|"원본"| perm{"이 뷰어의 view_records 존재<br/>또는 소유자?"}
-  perm -->|"아니오"| e403["403"]
+  perm -->|"아니오"| e403["403 MEDIA_FORBIDDEN"]
   perm -->|"예"| stream["S3 GetObject 스트림 응답<br/>Cache-Control: private, max-age=31536000, immutable"]
 ```
 
@@ -156,4 +160,4 @@ v0.1의 확인 필요 3건과 추가 쟁점 2건을 아래와 같이 결정했�
 | A2 | 열람 기록 IP 표기 | 시나리오 SC-05의 "IP"를 "IP 해시(HMAC)"로 수정 | 시나리오 SC-05 |
 | A3 | 비용 지표 | "같은 뷰어가 같은 미디어를 다시 열람할 때 미디어 프록시(`/api/media`) 재다운로드 비율" | PRD 1.3 |
 | A4 | PostgreSQL 위치 | AWS RDS for PostgreSQL 17 단일 인스턴스(관리형 자동 백업, EC2와 같은 VPC의 비공개 서브넷, 외부 접근 없음). 1인 운영에서 백업·패치를 직접 하지 않기 위함 | 1장 다이어그램, PRD 6장 배포 행, 원칙 5.2 |
-| A5 | 열람 판정 확인 순서 | 401 → 404 → 422 → 403 확정(존재하지 않는 캡슐에 정확도 안내를 먼저 하지 않음) | 2.2, 원칙 5.2 |
+| A5 | 열람 판정 확인 순서 | 401 → 400 → 404 → 422 → 403 확정(존재하지 않는 캡슐에 정확도 안내를 먼저 하지 않음) | 2.2, 원칙 5.2 |
