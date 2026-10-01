@@ -17,7 +17,7 @@
 | [5-project-principle.md](docs/5-project-principle.md) | 프로젝트 구조 설계 원칙 (v0.6). 최상위 원칙(P), 의존성·레이어, 코드·네이밍(DB·API·에러 코드), 테스트·품질(커버리지 90%), 설정·보안·운영(쿠키 세션, 미디어 프록시, 배포), frontend/·backend/ 디렉토리 구조, 결정 내역 |
 | [6-arch-diagram.md](docs/6-arch-diagram.md) | 기술 아키텍처 다이어그램 (v0.4). MVP 시스템 아키텍처(브라우저, Cloudflare, EC2 Express, RDS PostgreSQL, S3, Rekognition), 캡슐 드롭·열람 판정·미디어 프록시 로직 다이어그램, 후속 구성 요소, 결정 내역 |
 | [7-erd.md](docs/7-erd.md) | ERD (v0.3). MVP 물리 ERD(users, sessions, capsules, view_records)와 컬럼·제약·인덱스, 운영용 테이블, 후속 단계 개념 ERD, 결정 내역 |
-| [8-plan.md](docs/8-plan.md) | 실행 계획 (v0.3). Task 30개(OPS·DB·BE·FE)의 수행 작업, 체크박스 완료 조건, 선행 Task, 의존 관계 다이어그램, 2일 일정 배치, 결정 내역. `/develop-backend`·`/develop-frontend` 스킬이 Task ID로 참조 |
+| [8-plan.md](docs/8-plan.md) | 실행 계획 (v0.4). Task 30개(OPS·DB·BE·FE)의 수행 작업, 체크박스 완료 조건, 선행 Task, 의존 관계 다이어그램, 2일 일정 배치, 결정 내역. `/develop-backend`·`/develop-frontend` 스킬이 Task ID로 참조 |
 | [schema.sql](docs/schema.sql) | MVP DB 생성 DDL (PostgreSQL 17). `backend/db/migrations/001_init.sql`의 원본 |
 
 # 코딩 행동 지침

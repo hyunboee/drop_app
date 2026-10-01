@@ -9,6 +9,7 @@
 | 0.1 | 2026-10-01 | Claude Code | 초안 작성 |
 | 0.2 | 2026-10-01 | Claude Code | 확인 필요 9건 결정 반영: 계획 경로 확정, 개발 의존성 승인, DB-01을 schema.sql 그대로 복사 + migrate 트랜잭션으로 수정, FE-00 스타일 가이드 Task 추가, BE-03·FE-01에 `GET /api/me`, BE-06 같은 `media_id` 멱등 200·409 `MEDIA_ALREADY_USED`, 남은 거리 올림, S3 CORS 범위, 8장을 결정 내역으로 변경 |
 | 0.3 | 2026-10-01 | Claude Code | DB 생성·수정 시 postgresql MCP 사용 규칙(2.5) 추가, DB-01·DB-02의 `psql` 사용을 MCP로 변경 |
+| 0.4 | 2026-10-01 | Claude Code | 개발 DB 이름을 사용자 결정에 따라 `drop_dev`에서 `drop_app`으로 변경(DB-02), OPS-01~BE-11 완료 조건 체크 |
 
 ---
 
@@ -175,13 +176,13 @@ flowchart LR
   - `backend/package.json`에 `"migrate": "node scripts/migrate.js"` 스크립트 추가.
   - `backend/test/integration/migrate.test.js`: 빈 테스트 DB에 적용, 재실행 시 변경 없음, 실패 파일 롤백을 검증한다.
 - **완료 조건**
-  - [ ] `backend/db/migrations/001_init.sql`이 `docs/schema.sql`과 바이트 단위로 같다(diff 없음)
-  - [ ] 빈 PostgreSQL 17 DB에서 `npm run migrate` 실행 후 `users`, `sessions`, `capsules`, `view_records`, `schema_migrations` 5개 테이블과 `idx_capsules_lat_lng`, `idx_view_records_capsule_id_user_id` 인덱스가 존재한다(테스트로 확인)
-  - [ ] 같은 DB에서 다시 실행하면 아무 파일도 재적용하지 않고 `schema_migrations` 행 수가 그대로다
-  - [ ] SQL 오류가 있는 마이그레이션 파일은 그 파일의 변경과 이력 INSERT가 함께 롤백되어(테이블 미생성, `schema_migrations` 미기록) 프로세스가 0이 아닌 코드로 끝난다
-  - [ ] 빈 DB에서 postgresql MCP `pg_execute_sql`로 `docs/schema.sql`을 실행하면 오류 없이 끝나고, `pg_manage_schema`로 5개 테이블이 확인된다
-  - [ ] CHECK 제약 확인: `grade = 'SILVER'`, `status = 'EXPIRED'`, `heading = 360`, `lat = 91`, 빈 제목 INSERT가 모두 실패한다
-  - [ ] `npm test` 전체 통과, `scripts/migrate.js` 라인 커버리지 90% 이상
+  - [x] `backend/db/migrations/001_init.sql`이 `docs/schema.sql`과 바이트 단위로 같다(diff 없음)
+  - [x] 빈 PostgreSQL 17 DB에서 `npm run migrate` 실행 후 `users`, `sessions`, `capsules`, `view_records`, `schema_migrations` 5개 테이블과 `idx_capsules_lat_lng`, `idx_view_records_capsule_id_user_id` 인덱스가 존재한다(테스트로 확인)
+  - [x] 같은 DB에서 다시 실행하면 아무 파일도 재적용하지 않고 `schema_migrations` 행 수가 그대로다
+  - [x] SQL 오류가 있는 마이그레이션 파일은 그 파일의 변경과 이력 INSERT가 함께 롤백되어(테이블 미생성, `schema_migrations` 미기록) 프로세스가 0이 아닌 코드로 끝난다
+  - [x] 빈 DB에서 postgresql MCP `pg_execute_sql`로 `docs/schema.sql`을 실행하면 오류 없이 끝나고, `pg_manage_schema`로 5개 테이블이 확인된다
+  - [x] CHECK 제약 확인: `grade = 'SILVER'`, `status = 'EXPIRED'`, `heading = 360`, `lat = 91`, 빈 제목 INSERT가 모두 실패한다
+  - [x] `npm test` 전체 통과, `scripts/migrate.js` 라인 커버리지 90% 이상
 - **선행 Task:** OPS-01
 - **관련 ID:** 원칙 3.2·5.3·7장 #5, ERD 1.1~1.5·E4, PRD 8장, NFR-04, INV-02, INV-06
 
@@ -189,17 +190,17 @@ flowchart LR
 
 - **목표:** 통합 테스트가 실제 PostgreSQL 17 테스트 DB를 마이그레이션된 상태로 쓰고 파일마다 비울 수 있게 한다.
 - **수행 작업**
-  - 로컬에 PostgreSQL 17 개발 DB(`drop_dev`)와 테스트 전용 DB(`drop_test`)를 postgresql MCP `pg_execute_sql`(`CREATE DATABASE`)로 만든다(2.5). 테스트는 커밋하지 않는 `backend/.env.test`의 `DATABASE_URL`을 쓴다(`.env.example`에 변수 이름만 기록).
+  - 로컬에 PostgreSQL 17 개발 DB(`drop_app`)와 테스트 전용 DB(`drop_test`)를 postgresql MCP `pg_execute_sql`(`CREATE DATABASE`)로 만든다(2.5). 테스트는 커밋하지 않는 `backend/.env.test`의 `DATABASE_URL`을 쓴다(`.env.example`에 변수 이름만 기록).
   - `backend/test/helpers/db.js` 작성: 테스트 DB에 DB-01의 `migrate(pool)` 적용, `TRUNCATE users, sessions, capsules, view_records CASCADE`로 비우는 함수, 사용자·캡슐 테스트 행을 넣는 최소 픽스처 함수(`insertUser`, `insertCapsule`).
   - 실수로 다른 DB를 비우지 않도록 DB 이름이 `_test`로 끝나지 않으면 헬퍼가 즉시 오류를 던진다.
   - `backend/package.json`의 `test` 스크립트를 `node --env-file=.env.test --test --experimental-test-coverage --test-coverage-lines=90 test/`로 정한다(테스트 파일 동시 실행으로 TRUNCATE가 겹치지 않게 `--test-concurrency=1`).
 - **완료 조건**
-  - [ ] `drop_dev`·`drop_test`가 postgresql MCP로 생성되어 있다(`pg_execute_query`로 `pg_database` 조회 확인)
-  - [ ] `npm test` 실행 시 마이그레이션이 테스트 DB에 자동 적용된다
-  - [ ] 헬퍼 테스트: TRUNCATE 후 4개 테이블 행 수가 0이다
-  - [ ] DB 이름이 `_test`로 끝나지 않는 `DATABASE_URL`이면 헬퍼가 오류를 던진다(테스트로 확인)
-  - [ ] `insertUser`·`insertCapsule`로 넣은 행이 FK·CHECK를 만족한다
-  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+  - [x] `drop_app`·`drop_test`가 postgresql MCP로 생성되어 있다(`pg_execute_query`로 `pg_database` 조회 확인)
+  - [x] `npm test` 실행 시 마이그레이션이 테스트 DB에 자동 적용된다
+  - [x] 헬퍼 테스트: TRUNCATE 후 4개 테이블 행 수가 0이다
+  - [x] DB 이름이 `_test`로 끝나지 않는 `DATABASE_URL`이면 헬퍼가 오류를 던진다(테스트로 확인)
+  - [x] `insertUser`·`insertCapsule`로 넣은 행이 FK·CHECK를 만족한다
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** DB-01
 - **관련 ID:** 원칙 4.2(DB 행), 4.1, 5.1
 
@@ -219,13 +220,13 @@ flowchart LR
   - `src/server.js`: 포트 열기만.
   - `test/helpers/app.js`: 앱을 임의 포트로 띄우고 내장 `fetch`로 호출하는 헬퍼.
 - **완료 조건**
-  - [ ] `GET /api/health`가 DB 정상 시 200, `SELECT 1` 실패 시 500 `INTERNAL_ERROR`를 반환한다(통합 테스트)
-  - [ ] 필수 환경 변수가 하나라도 없으면 config 로딩이 실패한다(단위 테스트)
-  - [ ] 처리되지 않은 오류 응답이 `{ "error": { "code": "INTERNAL_ERROR", ... } }`이고 스택·내부 메시지를 담지 않는다
-  - [ ] 잘못된 JSON 본문 요청은 400 `VALIDATION_FAILED`
-  - [ ] 로그 한 줄에 이메일 원문·쿠키·좌표가 들어가지 않는다(단위 테스트)
-  - [ ] `src/` 안에 숫자 리터럴로 된 PRM·M 값이 `params.js` 밖에 없다(코드 확인)
-  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+  - [x] `GET /api/health`가 DB 정상 시 200, `SELECT 1` 실패 시 500 `INTERNAL_ERROR`를 반환한다(통합 테스트)
+  - [x] 필수 환경 변수가 하나라도 없으면 config 로딩이 실패한다(단위 테스트)
+  - [x] 처리되지 않은 오류 응답이 `{ "error": { "code": "INTERNAL_ERROR", ... } }`이고 스택·내부 메시지를 담지 않는다
+  - [x] 잘못된 JSON 본문 요청은 400 `VALIDATION_FAILED`
+  - [x] 로그 한 줄에 이메일 원문·쿠키·좌표가 들어가지 않는다(단위 테스트)
+  - [x] `src/` 안에 숫자 리터럴로 된 PRM·M 값이 `params.js` 밖에 없다(코드 확인)
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** DB-02
 - **관련 ID:** 원칙 2.1·3.3·5.1·5.3, NFR-04, NFR-07, P-05, P-07
 
@@ -240,14 +241,14 @@ flowchart LR
   - 쿠키: `Set-Cookie: sid=<토큰>; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=<M-04>`.
   - 테스트: `test/unit/auth.test.js`(해시·검증, 토큰, 잠금 경계), `test/integration/auth.test.js`.
 - **완료 조건**
-  - [ ] FR-01 가입 성공 201, 응답에 `HttpOnly`, `Secure`, `SameSite=Strict`, `Max-Age`(M-04) 쿠키가 있고 DB에는 토큰 원문이 아니라 해시만 저장된다
-  - [ ] 이메일 대소문자만 다른 중복 가입 409 `EMAIL_TAKEN`
-  - [ ] 비밀번호 M-10 미만, 이메일 형식 오류, 동의 3개 중 하나라도 누락이면 400 `VALIDATION_FAILED`
-  - [ ] `users.password_hash`가 평문과 다르고 `terms_version`이 저장된다
-  - [ ] 로그인 성공 200 + 세션 쿠키, 그 유저의 만료 세션 행이 삭제된다
-  - [ ] 비밀번호 불일치와 미가입 이메일이 같은 메시지의 401 `INVALID_CREDENTIALS`
-  - [ ] M-05 횟수 연속 실패 후 다음 요청은 올바른 비밀번호여도 429 `ACCOUNT_LOCKED`, 미가입 이메일도 같은 조건에서 429, 잠금 시간 경과 후(시간 대체) 다시 로그인 가능
-  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+  - [x] FR-01 가입 성공 201, 응답에 `HttpOnly`, `Secure`, `SameSite=Strict`, `Max-Age`(M-04) 쿠키가 있고 DB에는 토큰 원문이 아니라 해시만 저장된다
+  - [x] 이메일 대소문자만 다른 중복 가입 409 `EMAIL_TAKEN`
+  - [x] 비밀번호 M-10 미만, 이메일 형식 오류, 동의 3개 중 하나라도 누락이면 400 `VALIDATION_FAILED`
+  - [x] `users.password_hash`가 평문과 다르고 `terms_version`이 저장된다
+  - [x] 로그인 성공 200 + 세션 쿠키, 그 유저의 만료 세션 행이 삭제된다
+  - [x] 비밀번호 불일치와 미가입 이메일이 같은 메시지의 401 `INVALID_CREDENTIALS`
+  - [x] M-05 횟수 연속 실패 후 다음 요청은 올바른 비밀번호여도 429 `ACCOUNT_LOCKED`, 미가입 이메일도 같은 조건에서 429, 잠금 시간 경과 후(시간 대체) 다시 로그인 가능
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** BE-01
 - **관련 ID:** FR-01, BR-01, Q-05, M-04, M-05, M-10, PRV-07, SC-01, W-01, W-02, ERD E1·E5~E7, 원칙 5.2
 
@@ -260,13 +261,13 @@ flowchart LR
   - `POST /api/auth/logout`: 세션 행 삭제, 쿠키 삭제(`Max-Age=0`), 204.
   - `GET /api/me`: 세션 유저의 `{ id, email }`을 200으로 반환, 세션이 없거나 만료면 미들웨어가 401. 앱 재진입 시 W-01/W-03 분기에 쓴다(FE-01, 8장 #6).
 - **완료 조건**
-  - [ ] FR-01 쿠키 없음, 위조 토큰, 만료 세션(`expires_at` 과거)으로 보호 API 호출 시 401 `AUTH_REQUIRED`
-  - [ ] `GET /api/health`, `POST /api/auth/signup`, `POST /api/auth/login`은 쿠키 없이도 401이 아니다
-  - [ ] 로그인 쿠키로 `POST /api/auth/logout` 204, 세션 행이 삭제되고 같은 쿠키로 재호출 시 401
-  - [ ] 로그아웃 응답이 `sid` 쿠키를 지운다(`Max-Age=0`)
-  - [ ] `GET /api/me`가 로그인 쿠키로 200 `{ id, email }`(다른 필드 없음), 쿠키 없음·만료 세션·로그아웃 후에는 401 `AUTH_REQUIRED`
-  - [ ] PRD 8장 1일차 오전 기준 "로그인 후 세션 쿠키로 보호 API 호출 성공"을 통합 테스트로 확인한다
-  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+  - [x] FR-01 쿠키 없음, 위조 토큰, 만료 세션(`expires_at` 과거)으로 보호 API 호출 시 401 `AUTH_REQUIRED`
+  - [x] `GET /api/health`, `POST /api/auth/signup`, `POST /api/auth/login`은 쿠키 없이도 401이 아니다
+  - [x] 로그인 쿠키로 `POST /api/auth/logout` 204, 세션 행이 삭제되고 같은 쿠키로 재호출 시 401
+  - [x] 로그아웃 응답이 `sid` 쿠키를 지운다(`Max-Age=0`)
+  - [x] `GET /api/me`가 로그인 쿠키로 200 `{ id, email }`(다른 필드 없음), 쿠키 없음·만료 세션·로그아웃 후에는 401 `AUTH_REQUIRED`
+  - [x] PRD 8장 1일차 오전 기준 "로그인 후 세션 쿠키로 보호 API 호출 성공"을 통합 테스트로 확인한다
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** BE-02
 - **관련 ID:** FR-01, BR-01, M-04, 원칙 2.1·5.2, SC-01, W-05(세션 만료 401)
 
@@ -279,12 +280,12 @@ flowchart LR
   - `src/aws/moderation.js`: `DetectModerationLabels`(S3 객체 직접 참조, MinConfidence·거부 최상위 라벨은 M-14, 제한 시간 M-09). 결과를 `{ rejected: boolean, labels: string[] }`로 반환하고, 실패·시간 초과는 구분 가능한 오류로 던진다.
   - 테스트: SDK 클라이언트의 `send`를 `node:test` `mock`으로 대체해 명령 종류·파라미터를 검증한다(실제 AWS 호출 없음).
 - **완료 조건**
-  - [ ] Presigned PUT URL 서명 대상에 `if-none-match`, `x-amz-tagging`(`status=pending`), `content-type`(`image/jpeg`)이 포함되고 유효 시간이 M-03이다(단위 테스트)
-  - [ ] M-14 거부 라벨(Explicit, Violence, Visually Disturbing, Hate Symbols)이 최상위 또는 상위 라벨로 오면 `rejected: true`, 수영복 등 다른 라벨은 `false`
-  - [ ] Rekognition 호출이 M-09를 넘거나 오류면 "검열 불가" 오류를 던진다
-  - [ ] `removePendingTag`, `deleteObjects`, `headObject`, `getObjectStream`이 올바른 버킷·키로 명령을 보낸다
-  - [ ] `src/aws/` 밖에서 `@aws-sdk`를 import하지 않는다(코드 확인)
-  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+  - [x] Presigned PUT URL 서명 대상에 `if-none-match`, `x-amz-tagging`(`status=pending`), `content-type`(`image/jpeg`)이 포함되고 유효 시간이 M-03이다(단위 테스트)
+  - [x] M-14 거부 라벨(Explicit, Violence, Visually Disturbing, Hate Symbols)이 최상위 또는 상위 라벨로 오면 `rejected: true`, 수영복 등 다른 라벨은 `false`
+  - [x] Rekognition 호출이 M-09를 넘거나 오류면 "검열 불가" 오류를 던진다
+  - [x] `removePendingTag`, `deleteObjects`, `headObject`, `getObjectStream`이 올바른 버킷·키로 명령을 보낸다
+  - [x] `src/aws/` 밖에서 `@aws-sdk`를 import하지 않는다(코드 확인)
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** BE-01
 - **관련 ID:** FR-04, FR-06, NFR-05, NFR-07, M-03, M-09, M-14, 원칙 2.1·4.1·5.2·7장 #13~15
 
@@ -297,12 +298,12 @@ flowchart LR
   - 재시도(FR-04 네트워크 실패)는 새 `media_id`로 다시 발급받는 것으로 충분하다(서버 추가 처리 없음).
   - 테스트는 `aws/storage.js`만 대체한다.
 - **완료 조건**
-  - [ ] FR-04 로그인 상태에서 200, `media_id`가 UUID이고 두 URL의 키가 `media/{media_id}.jpg`, `media/{media_id}.thumb.jpg`이다
-  - [ ] 두 번 호출하면 서로 다른 `media_id`가 나온다(키 재사용 없음, NFR-05)
-  - [ ] 응답 `headers`에 브라우저가 PUT에 실어야 할 `Content-Type`, `If-None-Match: *`, `x-amz-tagging` 값이 있다
-  - [ ] 비로그인 401 `AUTH_REQUIRED`
-  - [ ] 요청 로그에 Presigned URL이 남지 않는다
-  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+  - [x] FR-04 로그인 상태에서 200, `media_id`가 UUID이고 두 URL의 키가 `media/{media_id}.jpg`, `media/{media_id}.thumb.jpg`이다
+  - [x] 두 번 호출하면 서로 다른 `media_id`가 나온다(키 재사용 없음, NFR-05)
+  - [x] 응답 `headers`에 브라우저가 PUT에 실어야 할 `Content-Type`, `If-None-Match: *`, `x-amz-tagging` 값이 있다
+  - [x] 비로그인 401 `AUTH_REQUIRED`
+  - [x] 요청 로그에 Presigned URL이 남지 않는다
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** BE-03, BE-04
 - **관련 ID:** FR-04, NFR-02, NFR-05, NFR-07, M-03, M-08, SC-03, W-09, 원칙 3.3·5.2
 
@@ -317,16 +318,16 @@ flowchart LR
   - 동시 요청으로 INSERT가 `media_id` UNIQUE 위반이면 다시 조회해 위 규칙(같은 유저 200, 다른 유저 409)으로 응답한다(8장 #7).
   - 응답 새 게시 `201 { id, expires_at }`, 같은 유저 재요청 `200 { id, expires_at }`.
 - **완료 조건**
-  - [ ] FR-06·FR-07 원본·썸네일 모두 통과 시 201, `expires_at - published_at`이 PRM-06(720시간)이고 행 `status`가 `ACTIVE`, `removePendingTag`가 INSERT보다 먼저 호출된다
-  - [ ] 원본만 거부, 썸네일만 거부 각각 422 `MODERATION_REJECTED`, 캡슐 행 없음, `deleteObjects` 호출
-  - [ ] 검열 실패·M-09 초과 시 503 `MODERATION_UNAVAILABLE`, 행 없음, `deleteObjects` 미호출, 같은 `media_id`로 재요청하면 201
-  - [ ] 제목 0자·M-11 초과·위경도 범위 밖·`heading` 360은 400 `VALIDATION_FAILED`, `grade: 'SILVER'`는 400 `GRADE_NOT_ALLOWED`
-  - [ ] FR-03 accuracy가 PRM-03 재측정 기준과 같으면 통과, 초과하면 422 `LOW_ACCURACY`(경계값 테스트)
-  - [ ] HeadObject 결과가 M-06 초과이거나 `image/jpeg`가 아니면 400 `VALIDATION_FAILED`
-  - [ ] 게시 성공 후 같은 유저가 같은 `media_id`로 다시 요청하면 200과 처음과 같은 `id`·`expires_at`, 캡슐 행은 1개 그대로이고 검열·S3 호출이 없다
-  - [ ] 다른 유저가 이미 게시된 `media_id`로 요청하면 409 `MEDIA_ALREADY_USED`, 행 변화 없음
-  - [ ] 비로그인 401 `AUTH_REQUIRED`
-  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+  - [x] FR-06·FR-07 원본·썸네일 모두 통과 시 201, `expires_at - published_at`이 PRM-06(720시간)이고 행 `status`가 `ACTIVE`, `removePendingTag`가 INSERT보다 먼저 호출된다
+  - [x] 원본만 거부, 썸네일만 거부 각각 422 `MODERATION_REJECTED`, 캡슐 행 없음, `deleteObjects` 호출
+  - [x] 검열 실패·M-09 초과 시 503 `MODERATION_UNAVAILABLE`, 행 없음, `deleteObjects` 미호출, 같은 `media_id`로 재요청하면 201
+  - [x] 제목 0자·M-11 초과·위경도 범위 밖·`heading` 360은 400 `VALIDATION_FAILED`, `grade: 'SILVER'`는 400 `GRADE_NOT_ALLOWED`
+  - [x] FR-03 accuracy가 PRM-03 재측정 기준과 같으면 통과, 초과하면 422 `LOW_ACCURACY`(경계값 테스트)
+  - [x] HeadObject 결과가 M-06 초과이거나 `image/jpeg`가 아니면 400 `VALIDATION_FAILED`
+  - [x] 게시 성공 후 같은 유저가 같은 `media_id`로 다시 요청하면 200과 처음과 같은 `id`·`expires_at`, 캡슐 행은 1개 그대로이고 검열·S3 호출이 없다
+  - [x] 다른 유저가 이미 게시된 `media_id`로 요청하면 409 `MEDIA_ALREADY_USED`, 행 변화 없음
+  - [x] 비로그인 401 `AUTH_REQUIRED`
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** BE-03, BE-04
 - **관련 ID:** FR-03, FR-04, FR-06, FR-07, BR-10, BR-33, Q-04, PRM-03, PRM-06, M-06, M-09, M-11, M-14, SC-03, W-09, W-10, 아키텍처 2.1, 원칙 5.2
 
@@ -357,10 +358,10 @@ flowchart LR
   | A-02 | isLowAccuracy | accuracy=30.01 | true (재측정 안내) |
 
 - **완료 조건**
-  - [ ] 공통 테스트 표 G-01~G-04, J-01~J-07, A-01~A-02가 모두 통과한다
-  - [ ] `boundingBox`가 M-01 반경 원을 포함한다: 중심에서 남북 189m 지점은 박스 안, 남북 212m 지점은 박스 밖(위도 37.5665 기준)
-  - [ ] `src/lib/geo.js`가 다른 레이어를 import하지 않는다
-  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+  - [x] 공통 테스트 표 G-01~G-04, J-01~J-07, A-01~A-02가 모두 통과한다
+  - [x] `boundingBox`가 M-01 반경 원을 포함한다: 중심에서 남북 189m 지점은 박스 안, 남북 212m 지점은 박스 밖(위도 37.5665 기준)
+  - [x] `src/lib/geo.js`가 다른 레이어를 import하지 않는다
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** OPS-01
 - **관련 ID:** FR-08, FR-10, BR-27, 도메인 5.4, PRM-01, PRM-03, Q-03, NFR-04, NFR-08, PRD 7장, 원칙 4.2·4.3(공통 공식)
 
@@ -372,13 +373,13 @@ flowchart LR
   - `src/repositories/capsules.js`: `lat BETWEEN $1 AND $2 AND lng BETWEEN $3 AND $4`(BE-07 `boundingBox`) + `status = 'ACTIVE' AND expires_at > now()`로 좁힌 뒤 SQL에서 하버사인 거리(R = 6,371,000m)로 M-01 이내만 반환. `is_mine = (user_id = $세션유저)`.
   - 응답 `200 { capsules: [{ id, title, lat, lng, thumb_url: "/api/media/{media_id}/thumb", is_mine }] }`. 원본 경로·`user_id`·`media_id` 원문 외 정보는 담지 않는다.
 - **완료 조건**
-  - [ ] FR-08 중심에서 남북 189m 캡슐은 포함, 212m 캡슐은 제외된다(M-01)
-  - [ ] 만료(`expires_at` 과거), `DELETED` 캡슐은 목록에 없다(BR-11, BR-33: 검열 미통과 캡슐은 행이 없음)
-  - [ ] 본인 캡슐은 `is_mine: true`, 타인 캡슐은 `false`
-  - [ ] `thumb_url`이 `/api/media/{media_id}/thumb` 형식이고 원본 경로는 응답에 없다(NFR-06)
-  - [ ] `lat` 누락·91, `lng` 문자열은 400 `VALIDATION_FAILED`, 비로그인 401 `AUTH_REQUIRED`
-  - [ ] 쿼리가 `$n` 파라미터 바인딩만 쓴다(NFR-07, 코드 확인)
-  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+  - [x] FR-08 중심에서 남북 189m 캡슐은 포함, 212m 캡슐은 제외된다(M-01)
+  - [x] 만료(`expires_at` 과거), `DELETED` 캡슐은 목록에 없다(BR-11, BR-33: 검열 미통과 캡슐은 행이 없음)
+  - [x] 본인 캡슐은 `is_mine: true`, 타인 캡슐은 `false`
+  - [x] `thumb_url`이 `/api/media/{media_id}/thumb` 형식이고 원본 경로는 응답에 없다(NFR-06)
+  - [x] `lat` 누락·91, `lng` 문자열은 400 `VALIDATION_FAILED`, 비로그인 401 `AUTH_REQUIRED`
+  - [x] 쿼리가 `$n` 파라미터 바인딩만 쓴다(NFR-07, 코드 확인)
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** BE-06, BE-07
 - **관련 ID:** FR-08, FR-09, FR-11(`is_mine`), BR-11, BR-26, BR-33, M-01, NFR-04, NFR-06, NFR-07, Q-06, SC-04, SC-06, W-05
 
@@ -393,13 +394,13 @@ flowchart LR
   - 응답 `200 { media_url: "/api/media/{media_id}" }`. 소유자도 같은 판정을 거친다.
   - MVP 단순화 주석(Q-11): 평면 일치·이동 속도·무결성·유효 시간 생략.
 - **완료 조건**
-  - [ ] FR-10 비로그인 401 → `:id` 형식 오류 400 → 없는·만료·`DELETED` 캡슐 404 → accuracy 재측정 기준 초과 422 → 반경 밖 403 순서가 지켜진다(예: 없는 캡슐 + 나쁜 accuracy는 404, 반경 밖 + 나쁜 accuracy는 422)
-  - [ ] 공통 테스트 표 J-02(경계 허용)·J-03(경계 밖 거부)에 해당하는 좌표 입력으로 200·403이 나온다
-  - [ ] 403 응답 `error.remaining_m`이 BE-07 `judgeOpen`의 남은 거리와 같다
-  - [ ] 200이면 `view_records`에 한 행이 생기고 `ip_hash`가 IP 원문이 아니며 같은 IP는 같은 해시다(PRV-04)
-  - [ ] 403·404·422에서는 `view_records` 행이 생기지 않는다
-  - [ ] 같은 뷰어가 두 번 열면 두 행이 생긴다(UNIQUE 없음, ERD 1.4)
-  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+  - [x] FR-10 비로그인 401 → `:id` 형식 오류 400 → 없는·만료·`DELETED` 캡슐 404 → accuracy 재측정 기준 초과 422 → 반경 밖 403 순서가 지켜진다(예: 없는 캡슐 + 나쁜 accuracy는 404, 반경 밖 + 나쁜 accuracy는 422)
+  - [x] 공통 테스트 표 J-02(경계 허용)·J-03(경계 밖 거부)에 해당하는 좌표 입력으로 200·403이 나온다
+  - [x] 403 응답 `error.remaining_m`이 BE-07 `judgeOpen`의 남은 거리와 같다
+  - [x] 200이면 `view_records`에 한 행이 생기고 `ip_hash`가 IP 원문이 아니며 같은 IP는 같은 해시다(PRV-04)
+  - [x] 403·404·422에서는 `view_records` 행이 생기지 않는다
+  - [x] 같은 뷰어가 두 번 열면 두 행이 생긴다(UNIQUE 없음, ERD 1.4)
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** BE-08
 - **관련 ID:** FR-10, BR-27, 도메인 5.4, INV-06, PRM-01, PRM-03, Q-03, Q-11, NFR-02, NFR-08, PRV-04, SC-05, SC-06, W-11, W-12, 아키텍처 2.2·A5, 원칙 5.2
 
@@ -411,13 +412,13 @@ flowchart LR
   - `src/services/media.js`: `media_id`로 `status = 'ACTIVE' AND expires_at > now()` 캡슐 조회(없으면 404) → 썸네일은 통과 → 원본은 소유자이거나 `view_records`에 (capsule_id, 세션 유저) 행이 있을 때만 통과, 아니면 403 `MEDIA_FORBIDDEN`.
   - 통과 시 `storage.getObjectStream`을 `pipeline`으로 응답에 흘려보낸다(메모리 적재 금지). 헤더: `Content-Type: image/jpeg`, `Cache-Control: private, max-age=31536000, immutable`.
 - **완료 조건**
-  - [ ] FR-10 비로그인 401 `AUTH_REQUIRED`(원본·썸네일 모두)
-  - [ ] 열람 기록 없는 타인의 원본 요청 403 `MEDIA_FORBIDDEN`, 같은 사용자의 썸네일 요청은 200
-  - [ ] BE-09 판정 통과 뒤 원본 200, 소유자는 열람 기록 없이 원본 200
-  - [ ] 만료·`DELETED` 캡슐의 원본·썸네일 404 `CAPSULE_NOT_FOUND`, UUID가 아닌 `mediaId`도 404
-  - [ ] 200 응답 헤더가 `Cache-Control: private, max-age=31536000, immutable`이고 본문이 `aws/storage.js` 대체 스트림 내용과 같다(NFR-05)
-  - [ ] 응답에 S3 URL이 포함되지 않는다
-  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+  - [x] FR-10 비로그인 401 `AUTH_REQUIRED`(원본·썸네일 모두)
+  - [x] 열람 기록 없는 타인의 원본 요청 403 `MEDIA_FORBIDDEN`, 같은 사용자의 썸네일 요청은 200
+  - [x] BE-09 판정 통과 뒤 원본 200, 소유자는 열람 기록 없이 원본 200
+  - [x] 만료·`DELETED` 캡슐의 원본·썸네일 404 `CAPSULE_NOT_FOUND`, UUID가 아닌 `mediaId`도 404
+  - [x] 200 응답 헤더가 `Cache-Control: private, max-age=31536000, immutable`이고 본문이 `aws/storage.js` 대체 스트림 내용과 같다(NFR-05)
+  - [x] 응답에 S3 URL이 포함되지 않는다
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** BE-09
 - **관련 ID:** FR-08, FR-10, NFR-05, NFR-06, NFR-08, Q-07, Q-08, SC-05, W-11, 아키텍처 2.3, 원칙 2.1·5.2·7장 #11
 
@@ -428,11 +429,11 @@ flowchart LR
   - route: `:id` UUID 형식 검증(400). service: ACTIVE·미만료 캡슐 조회(없으면 404 `CAPSULE_NOT_FOUND`) → 소유자 아니면 403 `NOT_OWNER` → `UPDATE capsules SET status = 'DELETED'` → `storage.deleteObjects`(원본·썸네일).
   - 응답 204. 행은 지우지 않는다(열람 기록 FK 유지, ERD 1.3).
 - **완료 조건**
-  - [ ] FR-11 소유자 삭제 204, 행 `status`가 `DELETED`, `deleteObjects`가 원본·썸네일 키로 호출된다
-  - [ ] 삭제 후 주변 조회(BE-08)에 나오지 않고, 열람(BE-09)·미디어(BE-10)는 404
-  - [ ] 타인 캡슐 삭제 403 `NOT_OWNER`, 행 변화 없음, S3 삭제 미호출
-  - [ ] 없는·이미 삭제된 캡슐 404, 형식 오류 400, 비로그인 401
-  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+  - [x] FR-11 소유자 삭제 204, 행 `status`가 `DELETED`, `deleteObjects`가 원본·썸네일 키로 호출된다
+  - [x] 삭제 후 주변 조회(BE-08)에 나오지 않고, 열람(BE-09)·미디어(BE-10)는 404
+  - [x] 타인 캡슐 삭제 403 `NOT_OWNER`, 행 변화 없음, S3 삭제 미호출
+  - [x] 없는·이미 삭제된 캡슐 404, 형식 오류 400, 비로그인 401
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** BE-08
 - **관련 ID:** FR-11, SC-07, W-11, 도메인 6장 Deleted, ERD 1.3, 원칙 5.2·7장 #20
 
@@ -678,10 +679,10 @@ flowchart LR
   - `backend/.env.example`(원칙 5.1 변수 이름만), 저장소 `.gitignore`(`.env`, `.env.test`, `node_modules`, `dist`, `coverage`).
   - lock 파일 커밋.
 - **완료 조건**
-  - [ ] `backend`, `frontend`에서 `npm ci`가 성공한다
-  - [ ] 두 `package.json`의 의존성이 원칙 2.3·PRD 6장 목록 밖 패키지를 포함하지 않는다
-  - [ ] `.env.example`에 원칙 5.1 변수 6개 이름만 있고 값이 없다
-  - [ ] `.env`, `.env.test`가 git에 추적되지 않는다
+  - [x] `backend`, `frontend`에서 `npm ci`가 성공한다
+  - [x] 두 `package.json`의 의존성이 원칙 2.3·PRD 6장 목록 밖 패키지를 포함하지 않는다
+  - [x] `.env.example`에 원칙 5.1 변수 6개 이름만 있고 값이 없다
+  - [x] `.env`, `.env.test`가 git에 추적되지 않는다
 - **선행 Task:** —
 - **관련 ID:** 원칙 2.3·5.1·6장·7장 #1~#4, PRD 6장, NFR-07
 
