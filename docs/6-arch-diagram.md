@@ -10,6 +10,7 @@
 | 0.2 | 2026-10-01 | Claude Code | 확인 필요 결정 반영: PostgreSQL을 RDS 단일 인스턴스로 표기, 열람 확인 순서 확정, 열람 기록의 증명 ID 컬럼 제거, 4장을 결정 내역으로 변경 |
 | 0.3 | 2026-10-01 | Claude Code | 문서 정합성 점검: 출처 문서 버전을 최신(도메인 v0.8, PRD v0.8, 시나리오 v0.4, 와이어프레임 v0.4, 원칙 v0.4)으로 갱신 |
 | 0.4 | 2026-10-01 | Claude Code | 문서 정합성 점검 미정 사항 반영: 2.2에 400 입력 검증 단계 추가, 2.3의 403에 `MEDIA_FORBIDDEN` 코드 표기 |
+| 0.6 | 2026-10-02 | Claude Code | 프레임 방향 회전(PRD v1.2 Q-14): 2.1 드롭 흐름을 사진 선택 → 위치·방향 정하기 순서로, heading을 프레임 방향으로 변경 |
 | 0.5 | 2026-10-02 | Claude Code | 드롭 위치 직접 배치(PRD v1.1 FR-03) 반영: 2.1에 프레임 끌어 놓기와 배치 거리(PRM-20) 검증 422 `DROP_TOO_FAR` 추가 |
 
 ---
@@ -69,7 +70,7 @@ sequenceDiagram
   participant R as Rekognition
   participant D as PostgreSQL
 
-  Note over B: 미리보기 프레임을 끌어 위치 결정(PRM-20 안), 놓을 때 앵커 좌표와 내 GPS·accuracy·heading 캡처 (FR-03)<br/>Canvas JPEG 재인코딩 M-13, 썸네일 M-07, 사전 검사 M-06
+  Note over B: 사진 선택 후 미리보기 프레임을 끌어 위치(PRM-20 안)·회전 슬라이더로 방향(heading) 결정, 놓을 때 앵커 좌표·heading과 내 GPS·accuracy 캡처 (FR-03)<br/>Canvas JPEG 재인코딩 M-13, 썸네일 M-07, 사전 검사 M-06
   B->>E: POST /api/uploads
   E-->>B: mediaId(UUID), 원본·썸네일 Presigned PUT URL (M-03)
   B->>S: PUT 원본, 썸네일 (If-None-Match: *, status=pending)

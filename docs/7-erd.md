@@ -9,6 +9,7 @@
 | 0.1 | 2026-10-01 | Claude Code | 초안 작성 |
 | 0.2 | 2026-10-01 | Claude Code | 확인 필요 8건 결정 반영: 잠금 컬럼 삭제(메모리 카운터), 증명 ID 컬럼 삭제, `users.terms_version` 추가, 운영용 테이블 `schema_migrations`, 로그인 성공 시 만료 세션 삭제, 3장을 결정 내역으로 변경 |
 | 0.3 | 2026-10-01 | Claude Code | 문서 정합성 점검: 출처 문서 버전을 최신(도메인 v0.8, PRD v0.8, 시나리오 v0.4, 와이어프레임 v0.4, 원칙 v0.4, 아키텍처 v0.3)으로 갱신 |
+| 0.4 | 2026-10-02 | Claude Code | 프레임 방향 회전(PRD v1.2 Q-14): `capsules.heading`의 의미를 드롭 시 기기 방향에서 프레임 앞면이 바라보는 방위로 변경. 타입·제약·DDL은 그대로 |
 
 ---
 
@@ -52,7 +53,7 @@ erDiagram
     float8 lat
     float8 lng
     float8 accuracy "드롭 시 GPS 정확도(m)"
-    float8 heading "드롭 시 기기 방향(도)"
+    float8 heading "프레임이 바라보는 방위(도)"
     text status "ACTIVE 또는 DELETED"
     timestamptz published_at
     timestamptz expires_at "published_at + PRM-06"
@@ -110,7 +111,7 @@ erDiagram
 | lat | double precision | NOT NULL | FR-03, NFR-04 |
 | lng | double precision | NOT NULL | FR-03, NFR-04 |
 | accuracy | double precision | NOT NULL | FR-03, PRM-03 |
-| heading | double precision | NOT NULL | FR-03, FR-02(방향 센서 필수), Q-02 |
+| heading | double precision | NOT NULL | FR-03, Q-02, Q-14 (프레임 앞면이 바라보는 방위, 북 0° 시계 방향. `schema.sql` 주석은 마이그레이션과 같게 두려고 바꾸지 않았다) |
 | status | text | NOT NULL, DEFAULT `'ACTIVE'` | 원칙 3.2, FR-11 |
 | published_at | timestamptz | NOT NULL, DEFAULT `now()` | INV-02, FR-07 |
 | expires_at | timestamptz | NOT NULL | FR-07, PRM-06, BR-11 |

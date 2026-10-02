@@ -12,6 +12,7 @@
 | 0.4 | 2026-10-01 | Claude Code | 개발 DB 이름을 사용자 결정에 따라 `drop_dev`에서 `drop_app`으로 변경(DB-02), OPS-01~BE-11 완료 조건 체크 |
 | 0.5 | 2026-10-02 | Claude Code | 프론트 구현 계획 반영: FE-03 선행에 FE-02 추가(Button·사진 배경 화면 재사용) |
 | 0.6 | 2026-10-02 | Claude Code | 드롭 위치 직접 배치(도메인 v1.0 OQ-34, PRD v1.1 Q-13) 반영: BE-12 드롭 배치 거리 검증, FE-13 드롭 위치 정하기 Task 추가, 결정 #10 |
+| 0.7 | 2026-10-02 | Claude Code | 프레임 방향 회전(PRD v1.2 Q-14) 반영: BE-13 주변 조회 응답 `heading`, FE-14 사진 먼저 → 위치·방향 정하기 Task 추가, 결정 #11 |
 
 ---
 
@@ -71,6 +72,7 @@ flowchart LR
   BE08 --> BE11["BE-11"]
   BE06 --> BE12["BE-12"]
   BE07 --> BE12
+  BE08 --> BE13["BE-13"]
   BE01 --> OPS02["OPS-02"]
 
   FE00["FE-00"] --> FE02
@@ -107,6 +109,8 @@ flowchart LR
   FE10 --> FE13
   BE12 --> FE13
   FE00 --> FE13
+  FE13 --> FE14["FE-14"]
+  BE13 --> FE14
 
   OPS02 --> OPS03["OPS-03"]
   FE03 --> OPS03
@@ -128,6 +132,7 @@ flowchart LR
 | 2일차 오후 | BE-09, BE-10, FE-11, OPS-03 | 1.3 MVP 검증 지표 충족 |
 | 여유 시 | BE-11, FE-12 (FR-11, P1), OPS-04 (NFR-01·02) | — |
 | 추가 (v0.6) | BE-12, FE-13 (FR-03 드롭 위치 직접 배치) | 프레임을 끌어 내 위치 10m 안에 놓은 캡슐이 그 자리에 보임 |
+| 추가 (v0.7) | BE-13, FE-14 (FR-03 프레임 방향 회전) | 슬라이더로 돌린 방향 그대로 다른 사용자에게도 프레임이 보임 |
 
 > OPS-04는 PRD 8장 주석대로 2일 안에 못 끝나면 MVP 완료 직후 첫 작업으로 한다.
 
@@ -152,6 +157,7 @@ flowchart LR
 | BE-10 | 미디어 프록시 | BE | BE-09 | P0 |
 | BE-11 | 내 캡슐 삭제 | BE | BE-08 | P1 (여유) |
 | BE-12 | 드롭 배치 거리 검증 | BE | BE-06, BE-07 | P0 |
+| BE-13 | 주변 조회 응답에 프레임 방향 | BE | BE-08 | P0 |
 | FE-00 | 스타일 가이드 작성 | FE(문서) | — | P0 |
 | FE-01 | 프론트 골격·API 클라이언트·스토어·화면 전환 | FE | OPS-01, BE-03 | P0 |
 | FE-02 | 로그인·회원가입 화면 | FE | FE-00, FE-01, BE-03 | P0 |
@@ -166,6 +172,7 @@ flowchart LR
 | FE-11 | 열람 화면·프레임 탭 분기 | FE | FE-00, FE-07, FE-08, BE-10 | P0 |
 | FE-12 | 열람 화면 삭제 버튼 | FE | FE-00, FE-11, BE-11 | P1 (여유) |
 | FE-13 | 드롭 위치 정하기 (프레임 끌어 놓기) | FE | FE-00, FE-08, FE-10, BE-12 | P0 |
+| FE-14 | 사진 먼저 고르고 위치·방향 정하기 (프레임 회전) | FE | FE-13, BE-13 | P0 |
 | OPS-02 | AWS 인프라·배포·HTTPS | OPS | BE-01 | P0 |
 | OPS-03 | 배포·실기기 현장 테스트 | OPS | OPS-02, FE-03, FE-10, FE-11 | P0 |
 | OPS-04 | 부하 테스트 | OPS | OPS-02, BE-09 | 여유 (MVP 직후) |
@@ -465,6 +472,19 @@ flowchart LR
 - **선행 Task:** BE-06, BE-07
 - **관련 ID:** FR-03, BR-04, PRM-20, Q-13, SC-03, W-13, 원칙 3.3
 
+#### BE-13 주변 조회 응답에 프레임 방향
+
+- **목표:** 모든 사용자가 같은 방향으로 프레임을 그리도록 `GET /api/capsules/nearby` 응답에 `heading`(프레임이 바라보는 방위)을 담는다.
+- **수행 작업**
+  - `src/repositories/capsules.js`: 주변 조회 SELECT에 `heading` 추가.
+  - `src/services/capsules.js`: 응답 항목을 `{ id, title, lat, lng, heading, thumb_url, is_mine }`로.
+  - 게시 요청의 `heading`은 그대로 받는다(의미만 프레임 방향으로 바뀜, 검증 0 이상 360 미만 동일).
+- **완료 조건**
+  - [x] FR-08 주변 조회 응답 항목에 저장된 `heading` 값이 그대로 담긴다
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
+- **선행 Task:** BE-08
+- **관련 ID:** FR-03, FR-08, Q-14, ERD v0.4
+
 ### 6.3 프론트엔드
 
 > UI를 그리는 FE Task는 FE-00의 `docs/9-style-guide.md`를 적용한다(develop-frontend SKILL, 8장 #5).
@@ -717,6 +737,25 @@ flowchart LR
 - **선행 Task:** FE-00, FE-08, FE-10, BE-12
 - **관련 ID:** FR-03, BR-04, PRM-20, Q-13, SC-03, W-06, W-13, W-09
 
+#### FE-14 사진 먼저 고르고 위치·방향 정하기 (프레임 회전)
+
+- **목표:** 드롭 순서를 W-07 사진 선택 → W-13 위치·방향 정하기 → W-08 제목으로 바꾸고, W-13에서 고른 사진을 담은 프레임을 끌고 슬라이더로 0~359° 돌려 앵커 방향을 정한다.
+- **수행 작업**
+  - `ArScreen`: "여기에 드롭"(정확도 통과) → 드롭 시트(W-07). W-07 "다음"에 위치가 없으면 시트를 숨기고 W-13 시작(시트는 그대로 두어 사진·제목 상태 유지). "여기에 놓기" → 앵커 `{ lat, lng, heading(슬라이더), accuracy, user_lat, user_lng }`로 W-08. W-13 "취소"는 드롭 전체 취소(W-05). 위치를 정한 뒤 W-08 "이전" → W-07 → "다음"은 바로 W-08.
+  - `src/components/DropSheet.tsx`: `anchor`가 없을 수 있고, 1단계 "다음"에서 위치가 없으면 `onPlace(file)`을 부른다. 위치를 정하는 동안은 시트를 그리지 않는다.
+  - `src/components/PlaceBar.tsx`: 방향 슬라이더(`<input type="range" min=0 max=359 step=1>`, 라벨 "방향", 값 °) 추가.
+  - `src/lib/geo.ts`: `bearingDeg(from, to)`(북 0° 시계 방향 방위). 슬라이더를 움직이기 전에는 프레임을 옮길 때마다 `bearingDeg(프레임, 내 위치)`로 나를 바라보게 맞춘다.
+  - `src/ar/ArScene.tsx`: 미리보기 프레임에 고른 사진(Object URL)을 담고, 미리보기와 주변 캡슐 프레임 모두 `rotation="0 (180 − heading) 0"`으로 그린다(평면 앞면 기본 방향 +z = 남쪽).
+  - `src/api/capsules.ts`: `NearbyCapsule`에 `heading`(BE-13 계약).
+- **완료 조건**
+  - [x] FR-03 "여기에 드롭" → W-07, 사진을 고르고 "다음" → W-13(시트 숨김, 미리보기에 고른 사진), "여기에 놓기" → W-08 순서로 간다
+  - [x] 슬라이더 값이 게시 요청의 `heading`으로 실린다. 슬라이더를 움직이기 전에는 `heading`이 프레임에서 내 위치를 바라보는 방위다
+  - [x] `bearingDeg`가 북·동·남·서를 0·90·180·270으로 돌려준다
+  - [x] W-13 "취소"는 시트까지 닫고 W-05로, 위치를 정한 뒤 W-08 "이전" → W-07 "다음"은 W-13을 거치지 않고 W-08로 간다
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상(`src/ar/` 제외)
+- **선행 Task:** FE-13, BE-13
+- **관련 ID:** FR-03, FR-04, FR-08, Q-14, SC-03, W-07, W-08, W-13
+
 ### 6.4 공통 준비 (OPS)
 
 #### OPS-01 저장소 구조·패키지 초기화
@@ -811,3 +850,4 @@ v0.1의 확인 필요 9건을 아래와 같이 결정했다.
 | 8 | 남은 거리 반올림 | 서버 `remaining_m`은 계산값 그대로, 화면 표시는 정수 m 올림(ceil) | FE-04, 원칙 2.2·4.3 |
 | 9 | S3 CORS | AllowedOrigins = 서비스 도메인 하나, AllowedMethods = PUT, AllowedHeaders = 서명된 헤더만(`Content-Type`, `If-None-Match`, `x-amz-tagging`) | OPS-02, 원칙 5.2 |
 | 10 | 드롭 위치 직접 배치 (v0.6) | 프레임을 끌어 앵커를 정하고 드롭하는 사람 위치에서 PRM-20(10m) 안으로 제한, 서버가 `user_lat`·`user_lng`로 검증. 사용자 좌표는 저장하지 않아 DB·ERD 변경 없음 | BE-12, FE-13, PRD FR-03·Q-13, 도메인 OQ-34 |
+| 11 | 프레임 방향 회전 (v0.7) | 사진을 먼저 고르고 W-13에서 위치와 함께 슬라이더로 0~359° 회전. 기존 `heading` 컬럼을 프레임 방향으로 쓰고 주변 조회 응답에 담는다. DB 변경 없음 | BE-13, FE-14, PRD FR-03·FR-08·Q-14, 도메인 OQ-35, ERD v0.4 |

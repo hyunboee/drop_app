@@ -10,14 +10,14 @@
 
 | 문서 | 내용 |
 |---|---|
-| [1-domain-definition.md](docs/1-domain-definition.md) | 도메인 정의서 (v1.0). 액터, 바운디드 컨텍스트, 유비쿼터스 언어, 애그리거트·불변식(INV), 운영 파라미터(PRM, 수치의 단일 출처), 현장 증명 판정, 캡슐 생명주기, 비즈니스 규칙(BR), 재화·정산(ST)·인앱결제(IAP)·개인정보(PRV) 정책, 도메인 이벤트(EV), 리스크(RISK), 결정 사항(OQ) |
-| [2-PRD.md](docs/2-PRD.md) | 제품 요구사항 정의서 (v1.1). 목표·KPI, 목표 사용자, MVP 범위(In/Out), 기능 요구사항(FR), MVP 파라미터(M), 비기능 요구사항(NFR), 기술 제약, UX 원칙, 2일 일정, 결정 사항(Q) |
-| [3-user-scenario.md](docs/3-user-scenario.md) | 사용자 시나리오 (v0.5). MVP 시나리오 SC-01~07, 후속 단계 시나리오 SC-08~17, 공백 G-01~20 해소 내역 |
-| [4-wireframes.md](docs/4-wireframes.md) | MVP 와이어프레임 (v0.6). 화면 목록, 화면 흐름도, 화면별 ASCII 와이어프레임 W-01~13, 후속 단계 화면 목록, 결정 내역 |
+| [1-domain-definition.md](docs/1-domain-definition.md) | 도메인 정의서 (v1.1). 액터, 바운디드 컨텍스트, 유비쿼터스 언어, 애그리거트·불변식(INV), 운영 파라미터(PRM, 수치의 단일 출처), 현장 증명 판정, 캡슐 생명주기, 비즈니스 규칙(BR), 재화·정산(ST)·인앱결제(IAP)·개인정보(PRV) 정책, 도메인 이벤트(EV), 리스크(RISK), 결정 사항(OQ) |
+| [2-PRD.md](docs/2-PRD.md) | 제품 요구사항 정의서 (v1.2). 목표·KPI, 목표 사용자, MVP 범위(In/Out), 기능 요구사항(FR), MVP 파라미터(M), 비기능 요구사항(NFR), 기술 제약, UX 원칙, 2일 일정, 결정 사항(Q) |
+| [3-user-scenario.md](docs/3-user-scenario.md) | 사용자 시나리오 (v0.6). MVP 시나리오 SC-01~07, 후속 단계 시나리오 SC-08~17, 공백 G-01~20 해소 내역 |
+| [4-wireframes.md](docs/4-wireframes.md) | MVP 와이어프레임 (v0.7). 화면 목록, 화면 흐름도, 화면별 ASCII 와이어프레임 W-01~13, 후속 단계 화면 목록, 결정 내역 |
 | [5-project-principle.md](docs/5-project-principle.md) | 프로젝트 구조 설계 원칙 (v0.7). 최상위 원칙(P), 의존성·레이어, 코드·네이밍(DB·API·에러 코드), 테스트·품질(커버리지 90%), 설정·보안·운영(쿠키 세션, 미디어 프록시, 배포), frontend/·backend/ 디렉토리 구조, 결정 내역 |
-| [6-arch-diagram.md](docs/6-arch-diagram.md) | 기술 아키텍처 다이어그램 (v0.5). MVP 시스템 아키텍처(브라우저, Cloudflare, EC2 Express, RDS PostgreSQL, S3, Rekognition), 캡슐 드롭·열람 판정·미디어 프록시 로직 다이어그램, 후속 구성 요소, 결정 내역 |
-| [7-erd.md](docs/7-erd.md) | ERD (v0.3). MVP 물리 ERD(users, sessions, capsules, view_records)와 컬럼·제약·인덱스, 운영용 테이블, 후속 단계 개념 ERD, 결정 내역 |
-| [8-plan.md](docs/8-plan.md) | 실행 계획 (v0.6). Task 32개(OPS·DB·BE·FE)의 수행 작업, 체크박스 완료 조건, 선행 Task, 의존 관계 다이어그램, 2일 일정 배치, 결정 내역. `/develop-backend`·`/develop-frontend` 스킬이 Task ID로 참조 |
+| [6-arch-diagram.md](docs/6-arch-diagram.md) | 기술 아키텍처 다이어그램 (v0.6). MVP 시스템 아키텍처(브라우저, Cloudflare, EC2 Express, RDS PostgreSQL, S3, Rekognition), 캡슐 드롭·열람 판정·미디어 프록시 로직 다이어그램, 후속 구성 요소, 결정 내역 |
+| [7-erd.md](docs/7-erd.md) | ERD (v0.4). MVP 물리 ERD(users, sessions, capsules, view_records)와 컬럼·제약·인덱스, 운영용 테이블, 후속 단계 개념 ERD, 결정 내역 |
+| [8-plan.md](docs/8-plan.md) | 실행 계획 (v0.7). Task 34개(OPS·DB·BE·FE)의 수행 작업, 체크박스 완료 조건, 선행 Task, 의존 관계 다이어그램, 2일 일정 배치, 결정 내역. `/develop-backend`·`/develop-frontend` 스킬이 Task ID로 참조 |
 | [schema.sql](docs/schema.sql) | MVP DB 생성 DDL (PostgreSQL 17). `backend/db/migrations/001_init.sql`의 원본 |
 | [9-style-guide.md](docs/9-style-guide.md) | 스타일 가이드 (v0.1). W-01 확정 시안(흙 속 타임캡슐) 기준 색상·간격·타이포 토큰(CSS 변수), 버튼·입력란·바텀시트·배너·안내·FAB·AR 프레임 규칙, W-01~W-12 적용표 |
 
