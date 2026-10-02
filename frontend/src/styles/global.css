@@ -32,6 +32,18 @@ button {
   cursor: pointer;
 }
 
+/* arjs-webcam-texture가 body에 붙이는 카메라 video는 텍스처로만 쓰이므로 숨긴다 (안 숨기면 페이지에 스크롤이 생긴다) */
+body > video {
+  display: none;
+}
+
+/* A-Frame 기본 VR·전체화면 버튼과 가로 모드 안내는 쓰지 않는다 */
+.a-enter-vr,
+.a-enter-ar,
+.a-orientation-modal {
+  display: none !important;
+}
+
 input {
   background: none;
   border: 0;
