@@ -19,6 +19,7 @@
 | [7-erd.md](docs/7-erd.md) | ERD (v0.3). MVP 물리 ERD(users, sessions, capsules, view_records)와 컬럼·제약·인덱스, 운영용 테이블, 후속 단계 개념 ERD, 결정 내역 |
 | [8-plan.md](docs/8-plan.md) | 실행 계획 (v0.4). Task 30개(OPS·DB·BE·FE)의 수행 작업, 체크박스 완료 조건, 선행 Task, 의존 관계 다이어그램, 2일 일정 배치, 결정 내역. `/develop-backend`·`/develop-frontend` 스킬이 Task ID로 참조 |
 | [schema.sql](docs/schema.sql) | MVP DB 생성 DDL (PostgreSQL 17). `backend/db/migrations/001_init.sql`의 원본 |
+| [9-style-guide.md](docs/9-style-guide.md) | 스타일 가이드 (v0.1). W-01 확정 시안(흙 속 타임캡슐) 기준 색상·간격·타이포 토큰(CSS 변수), 버튼·입력란·바텀시트·배너·안내·FAB·AR 프레임 규칙, W-01~W-12 적용표 |
 
 # 코딩 행동 지침
 
