@@ -10,6 +10,7 @@
 | 0.2 | 2026-10-01 | Claude Code | 확인 필요 결정 반영: PostgreSQL을 RDS 단일 인스턴스로 표기, 열람 확인 순서 확정, 열람 기록의 증명 ID 컬럼 제거, 4장을 결정 내역으로 변경 |
 | 0.3 | 2026-10-01 | Claude Code | 문서 정합성 점검: 출처 문서 버전을 최신(도메인 v0.8, PRD v0.8, 시나리오 v0.4, 와이어프레임 v0.4, 원칙 v0.4)으로 갱신 |
 | 0.4 | 2026-10-01 | Claude Code | 문서 정합성 점검 미정 사항 반영: 2.2에 400 입력 검증 단계 추가, 2.3의 403에 `MEDIA_FORBIDDEN` 코드 표기 |
+| 0.5 | 2026-10-02 | Claude Code | 드롭 위치 직접 배치(PRD v1.1 FR-03) 반영: 2.1에 프레임 끌어 놓기와 배치 거리(PRM-20) 검증 422 `DROP_TOO_FAR` 추가 |
 
 ---
 
@@ -68,7 +69,7 @@ sequenceDiagram
   participant R as Rekognition
   participant D as PostgreSQL
 
-  Note over B: 드롭 선택 시 GPS·accuracy·heading 캡처 (FR-03)<br/>Canvas JPEG 재인코딩 M-13, 썸네일 M-07, 사전 검사 M-06
+  Note over B: 미리보기 프레임을 끌어 위치 결정(PRM-20 안), 놓을 때 앵커 좌표와 내 GPS·accuracy·heading 캡처 (FR-03)<br/>Canvas JPEG 재인코딩 M-13, 썸네일 M-07, 사전 검사 M-06
   B->>E: POST /api/uploads
   E-->>B: mediaId(UUID), 원본·썸네일 Presigned PUT URL (M-03)
   B->>S: PUT 원본, 썸네일 (If-None-Match: *, status=pending)
@@ -77,8 +78,8 @@ sequenceDiagram
   else 같은 키 두 번째 PUT
     S-->>B: 412 (덮어쓰기 차단)
   end
-  B->>E: POST /api/capsules (앵커, 제목, mediaId, 등급)
-  Note over E: 입력 검증: 제목 M-11, 브론즈 외 400,<br/>accuracy가 PRM-03 재측정 기준보다 나쁘면 422
+  B->>E: POST /api/capsules (앵커, 내 좌표, 제목, mediaId, 등급)
+  Note over E: 입력 검증: 제목 M-11, 브론즈 외 400,<br/>accuracy가 PRM-03 재측정 기준보다 나쁘면 422,<br/>앵커와 내 좌표 거리가 PRM-20 초과면 422 DROP_TOO_FAR
   E->>S: HeadObject 원본·썸네일 (크기·형식 재확인, 위반 시 400)
   E->>R: DetectModerationLabels 원본·썸네일 (제한 시간 M-09, 기준 M-14)
   alt 하나라도 거부

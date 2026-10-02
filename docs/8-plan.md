@@ -11,6 +11,7 @@
 | 0.3 | 2026-10-01 | Claude Code | DB 생성·수정 시 postgresql MCP 사용 규칙(2.5) 추가, DB-01·DB-02의 `psql` 사용을 MCP로 변경 |
 | 0.4 | 2026-10-01 | Claude Code | 개발 DB 이름을 사용자 결정에 따라 `drop_dev`에서 `drop_app`으로 변경(DB-02), OPS-01~BE-11 완료 조건 체크 |
 | 0.5 | 2026-10-02 | Claude Code | 프론트 구현 계획 반영: FE-03 선행에 FE-02 추가(Button·사진 배경 화면 재사용) |
+| 0.6 | 2026-10-02 | Claude Code | 드롭 위치 직접 배치(도메인 v1.0 OQ-34, PRD v1.1 Q-13) 반영: BE-12 드롭 배치 거리 검증, FE-13 드롭 위치 정하기 Task 추가, 결정 #10 |
 
 ---
 
@@ -68,6 +69,8 @@ flowchart LR
   BE07 --> BE08
   BE08 --> BE09["BE-09"] --> BE10["BE-10"]
   BE08 --> BE11["BE-11"]
+  BE06 --> BE12["BE-12"]
+  BE07 --> BE12
   BE01 --> OPS02["OPS-02"]
 
   FE00["FE-00"] --> FE02
@@ -100,6 +103,10 @@ flowchart LR
   BE10 --> FE11
   FE11 --> FE12["FE-12"]
   BE11 --> FE12
+  FE08 --> FE13["FE-13"]
+  FE10 --> FE13
+  BE12 --> FE13
+  FE00 --> FE13
 
   OPS02 --> OPS03["OPS-03"]
   FE03 --> OPS03
@@ -120,6 +127,7 @@ flowchart LR
 | 2일차 오전 | BE-08, FE-03, FE-04, FE-06, FE-07, FE-08, FE-09, FE-10 | 실기기에서 드롭한 캡슐이 AR 뷰에 보임 |
 | 2일차 오후 | BE-09, BE-10, FE-11, OPS-03 | 1.3 MVP 검증 지표 충족 |
 | 여유 시 | BE-11, FE-12 (FR-11, P1), OPS-04 (NFR-01·02) | — |
+| 추가 (v0.6) | BE-12, FE-13 (FR-03 드롭 위치 직접 배치) | 프레임을 끌어 내 위치 10m 안에 놓은 캡슐이 그 자리에 보임 |
 
 > OPS-04는 PRD 8장 주석대로 2일 안에 못 끝나면 MVP 완료 직후 첫 작업으로 한다.
 
@@ -143,6 +151,7 @@ flowchart LR
 | BE-09 | 캡슐 열람 판정 | BE | BE-08 | P0 |
 | BE-10 | 미디어 프록시 | BE | BE-09 | P0 |
 | BE-11 | 내 캡슐 삭제 | BE | BE-08 | P1 (여유) |
+| BE-12 | 드롭 배치 거리 검증 | BE | BE-06, BE-07 | P0 |
 | FE-00 | 스타일 가이드 작성 | FE(문서) | — | P0 |
 | FE-01 | 프론트 골격·API 클라이언트·스토어·화면 전환 | FE | OPS-01, BE-03 | P0 |
 | FE-02 | 로그인·회원가입 화면 | FE | FE-00, FE-01, BE-03 | P0 |
@@ -156,6 +165,7 @@ flowchart LR
 | FE-10 | 드롭 시트 3·4단계 (업로드·게시, 완료) | FE | FE-00, FE-09, BE-05, BE-06 | P0 |
 | FE-11 | 열람 화면·프레임 탭 분기 | FE | FE-00, FE-07, FE-08, BE-10 | P0 |
 | FE-12 | 열람 화면 삭제 버튼 | FE | FE-00, FE-11, BE-11 | P1 (여유) |
+| FE-13 | 드롭 위치 정하기 (프레임 끌어 놓기) | FE | FE-00, FE-08, FE-10, BE-12 | P0 |
 | OPS-02 | AWS 인프라·배포·HTTPS | OPS | BE-01 | P0 |
 | OPS-03 | 배포·실기기 현장 테스트 | OPS | OPS-02, FE-03, FE-10, FE-11 | P0 |
 | OPS-04 | 부하 테스트 | OPS | OPS-02, BE-09 | 여유 (MVP 직후) |
@@ -438,6 +448,23 @@ flowchart LR
 - **선행 Task:** BE-08
 - **관련 ID:** FR-11, SC-07, W-11, 도메인 6장 Deleted, ERD 1.3, 원칙 5.2·7장 #20
 
+#### BE-12 드롭 배치 거리 검증
+
+- **목표:** `POST /api/capsules`에 드롭하는 사람의 좌표를 받아, 앵커가 그 위치에서 드롭 배치 반경(PRM-20) 안인지 서버에서 검증한다.
+- **수행 작업**
+  - 요청: BE-06 본문에 `user_lat`, `user_lng`(드롭하는 사람의 GPS 좌표, 필수)를 더한다. `lat`, `lng`는 사용자가 끌어 놓은 앵커 좌표다.
+  - `src/params.js`: `PRM_20_DROP_PLACE_RADIUS_M = 10`.
+  - `src/routes/capsules.js`: `user_lat`·`user_lng` 위경도 형식·범위 검증 → 400 `VALIDATION_FAILED`.
+  - `src/services/capsules.js`(게시): 기존 `media_id` 확인 → `LOW_ACCURACY` 확인 다음에 `distanceM(사용자 좌표, 앵커) > PRM-20`이면 422 `DROP_TOO_FAR`(S3·검열 호출 없음). 사용자 좌표는 검증에만 쓰고 저장하지 않는다(8장 #10).
+  - `src/errors.js`: `DROP_TOO_FAR`(422) 추가.
+- **완료 조건**
+  - [x] FR-03 앵커와 사용자 좌표 거리가 PRM-20과 같으면 통과, 넘으면 422 `DROP_TOO_FAR`이고 캡슐 행이 없으며 HeadObject·검열이 호출되지 않는다(경계값 테스트)
+  - [x] `user_lat`·`user_lng`가 없거나 범위 밖이면 400 `VALIDATION_FAILED`
+  - [x] 저장된 캡슐의 `lat`·`lng`는 앵커 좌표다(사용자 좌표가 아니다)
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
+- **선행 Task:** BE-06, BE-07
+- **관련 ID:** FR-03, BR-04, PRM-20, Q-13, SC-03, W-13, 원칙 3.3
+
 ### 6.3 프론트엔드
 
 > UI를 그리는 FE Task는 FE-00의 `docs/9-style-guide.md`를 적용한다(develop-frontend SKILL, 8장 #5).
@@ -669,6 +696,27 @@ flowchart LR
 - **선행 Task:** FE-00, FE-11, BE-11
 - **관련 ID:** FR-11, FR-08(`is_mine`), SC-07, W-11 ④, 와이어프레임 6장 #10
 
+#### FE-13 드롭 위치 정하기 (프레임 끌어 놓기)
+
+- **목표:** "여기에 드롭" 뒤 W-13에서 미리보기 프레임을 끌어 앵커 위치를 정하고, 드롭 배치 반경(PRM-20) 안에서만 놓게 한다.
+- **수행 작업**
+  - `src/params.ts`: `PRM_20_DROP_PLACE_RADIUS_M = 10`(백엔드와 공유 상수, `params.test.ts` 대조 목록에 추가).
+  - `src/lib/geo.ts`: `clampOffset(eastM, northM, maxM)`(반경 밖이면 같은 방향으로 경계까지 줄임), `offsetToLatLng(origin, eastM, northM)`(동·북 m 이동한 좌표), `latLngToOffset(origin, p)`(그 역).
+  - `src/ar/ArScene.tsx`: 위치 정하기 중에는 미리보기 프레임을 그린다. 시작하면 보고 있는 방향 3m 앞을, 프레임을 끌면 화면 좌표를 바닥(y=0)에 투영한 지점의 위경도를 알린다(AR.js 월드 좌표 = 스페리컬 메르카토르 역변환). 프레임 위에서 시작한 드래그만 위치를 바꾸고, 그 동안 화면 둘러보기를 멈춘다.
+  - `src/components/PlaceBar.tsx`(W-13 ①③④): 안내 문구, 내 위치에서 프레임까지 거리(m 반올림), "취소", "여기에 놓기". 거리가 PRM-20을 넘으면 "여기에 놓기" 비활성 + "내 위치에서 10m 안에만 놓을 수 있어요".
+  - `ArScreen`: "여기에 드롭"(정확도 통과) → 위치 정하기 시작(FAB 숨김). 알린 지점을 `latLngToOffset(현재 위치)` → `clampOffset` → `offsetToLatLng(현재 위치)`로 프레임 좌표를 정한다. "여기에 놓기" → 앵커 `{ lat, lng(프레임), accuracy, heading, user_lat, user_lng(현재 위치) }`로 드롭 시트(W-07) 열기. 이때 정확도가 나쁘면 W-12 드롭 재측정.
+  - `src/components/FabMenu.tsx`의 `Anchor` 타입에 `user_lat`, `user_lng` 추가(게시 요청 본문에 그대로 실린다, BE-12 계약).
+  - `DropStepProgress`(W-09): 422 `DROP_TOO_FAR` → "위치를 다시 정해 주세요" + 확인으로 W-05.
+- **완료 조건**
+  - [x] FR-03 `clampOffset`이 반경 안은 그대로, 반경 밖은 같은 방향 PRM-20 거리로 줄인다. `offsetToLatLng`로 옮긴 좌표와 원점의 `distanceM`이 이동 거리와 0.1m 안에서 같다
+  - [x] "여기에 드롭"(정확도 통과)이 드롭 시트 대신 W-13을 열고 FAB를 숨긴다. "취소"는 W-05로 돌아간다
+  - [x] "여기에 놓기"가 프레임 좌표를 `lat`·`lng`로, 현재 위치를 `user_lat`·`user_lng`로 넘기며 W-07을 연다
+  - [x] 내 위치에서 프레임까지 PRM-20을 넘으면 "여기에 놓기"가 비활성이고 안내 문구가 보인다
+  - [x] 게시 응답 422 `DROP_TOO_FAR`이면 "위치를 다시 정해 주세요"가 보이고 확인으로 시트가 닫힌다
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상(`src/ar/` 제외)
+- **선행 Task:** FE-00, FE-08, FE-10, BE-12
+- **관련 ID:** FR-03, BR-04, PRM-20, Q-13, SC-03, W-06, W-13, W-09
+
 ### 6.4 공통 준비 (OPS)
 
 #### OPS-01 저장소 구조·패키지 초기화
@@ -762,3 +810,4 @@ v0.1의 확인 필요 9건을 아래와 같이 결정했다.
 | 7 | 같은 `media_id` 재게시 | 같은 유저면 기존 캡슐을 200으로 반환(멱등), 다른 유저가 이미 쓰면 409 `MEDIA_ALREADY_USED` | BE-06, FE-10, 원칙 3.3, PRD FR-06 |
 | 8 | 남은 거리 반올림 | 서버 `remaining_m`은 계산값 그대로, 화면 표시는 정수 m 올림(ceil) | FE-04, 원칙 2.2·4.3 |
 | 9 | S3 CORS | AllowedOrigins = 서비스 도메인 하나, AllowedMethods = PUT, AllowedHeaders = 서명된 헤더만(`Content-Type`, `If-None-Match`, `x-amz-tagging`) | OPS-02, 원칙 5.2 |
+| 10 | 드롭 위치 직접 배치 (v0.6) | 프레임을 끌어 앵커를 정하고 드롭하는 사람 위치에서 PRM-20(10m) 안으로 제한, 서버가 `user_lat`·`user_lng`로 검증. 사용자 좌표는 저장하지 않아 DB·ERD 변경 없음 | BE-12, FE-13, PRD FR-03·Q-13, 도메인 OQ-34 |

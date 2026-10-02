@@ -12,6 +12,7 @@
 | 0.4 | 2026-10-01 | Claude Code | 문서 정합성 점검: 출처 문서 버전 갱신, 5.2 입력 검증에 heading 범위 추가(ERD 1.3 CHECK와 일치), 6.1 docs 목록에 아키텍처 다이어그램·ERD 추가 |
 | 0.5 | 2026-10-01 | Claude Code | 문서 정합성 점검 미정 사항 반영: 에러 코드 `MEDIA_FORBIDDEN` 추가, 열람 확인 순서에 400(입력 검증) 위치 확정 |
 | 0.6 | 2026-10-01 | Claude Code | 실행 계획(8-plan.md) 결정 반영: 계획 경로 `8-plan.md`, 개발 의존성 3개 추가, `GET /api/me`·`MEDIA_ALREADY_USED` 추가, 남은 거리 표시 올림, S3 CORS 범위, migrate 트랜잭션 방식, 스타일 가이드 `9-style-guide.md` |
+| 0.7 | 2026-10-02 | Claude Code | 드롭 위치 직접 배치(PRD v1.1 FR-03) 반영: 에러 코드 `DROP_TOO_FAR`(422) 추가 |
 
 ---
 
@@ -145,6 +146,7 @@ MVP 엔드포인트 (이 외에는 만들지 않는다)
 | `VALIDATION_FAILED` | 400 | FR-04, FR-07, M-06, M-10, M-11 |
 | `GRADE_NOT_ALLOWED` | 400 | FR-07, Q-04 |
 | `LOW_ACCURACY` | 422 | FR-03, FR-10, PRM-03 |
+| `DROP_TOO_FAR` | 422 | FR-03, PRM-20 (앵커가 드롭하는 사람 위치에서 배치 반경을 넘음) |
 | `OUT_OF_RANGE` | 403 (`remaining_m` 포함) | FR-10, NFR-08 |
 | `MODERATION_REJECTED` | 422 | FR-06, M-14 |
 | `MODERATION_UNAVAILABLE` | 503 | FR-06, M-09 |
