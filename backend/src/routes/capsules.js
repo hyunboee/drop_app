@@ -33,7 +33,7 @@ export function createCapsulesRouter(deps) {
   const router = Router();
 
   router.post('/', async (req, res) => {
-    const { media_id, title, grade, lat, lng, accuracy, heading } = bodyOf(req);
+    const { media_id, title, grade, lat, lng, accuracy, heading, user_lat, user_lng } = bodyOf(req);
     const titleLength = typeof title === 'string' ? [...title].length : -1;
     if (
       typeof media_id !== 'string' ||
@@ -42,6 +42,8 @@ export function createCapsulesRouter(deps) {
       titleLength > M_11_TITLE_MAX_LENGTH ||
       !isLat(lat) ||
       !isLng(lng) ||
+      !isLat(user_lat) ||
+      !isLng(user_lng) ||
       !isAccuracy(accuracy) ||
       !isHeading(heading) ||
       typeof grade !== 'string'
@@ -50,7 +52,7 @@ export function createCapsulesRouter(deps) {
     }
     if (grade !== 'BRONZE') throw new AppError('GRADE_NOT_ALLOWED');
     const { created, capsule } = await publishCapsule(deps, {
-      userId: req.userId, mediaId: media_id, title, grade, lat, lng, accuracy, heading,
+      userId: req.userId, mediaId: media_id, title, grade, lat, lng, accuracy, heading, userLat: user_lat, userLng: user_lng,
     });
     res.status(created ? 201 : 200).json({ id: capsule.id, expires_at: capsule.expires_at });
   });

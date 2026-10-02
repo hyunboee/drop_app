@@ -14,7 +14,7 @@ const UPLOADS = {
   thumb: target('https://s3.example/t'),
 };
 const RESULT = { id: 'c9', expires_at: new Date(2026, 10, 30, 12).toISOString() };
-const ANCHOR = { lat: 37.5, lng: 127.1, accuracy: 8, heading: 90 };
+const ANCHOR = { lat: 37.5, lng: 127.1, accuracy: 8, heading: 90, user_lat: 37.50003, user_lng: 127.1 };
 const PUT_OK = /^https:\/\/s3\.example\/[ot]\d?$/;
 
 function routes(capsules: MockReply | MockReply[] = { status: 201, json: RESULT }) {
@@ -66,6 +66,8 @@ describe('DropStepProgress 성공 흐름', () => {
       lng: 127.1,
       accuracy: 8,
       heading: 90,
+      user_lat: 37.50003,
+      user_lng: 127.1,
     });
     expect(onDone).toHaveBeenCalledTimes(1);
   });
@@ -230,6 +232,14 @@ describe('DropStepProgress 게시 실패', () => {
     fireEvent.click(screen.getByRole('button', { name: '확인' }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+});
+
+it('FE-13 FR-03 422 DROP_TOO_FAR → "위치를 다시 정해 주세요" 안내 + "확인"이 onClose', async () => {
+  mockFetch(routes(apiError('DROP_TOO_FAR', 422)));
+  const { onClose } = setup();
+  expect(await screen.findByText('내 위치에서 10m 안에만 놓을 수 있어요. 위치를 다시 정해 주세요')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: '확인' }));
+  expect(onClose).toHaveBeenCalledTimes(1);
 });
 
 describe('DropStepProgress 인코딩 실패', () => {

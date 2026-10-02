@@ -70,7 +70,7 @@ describe('FabMenu 여기에 드롭', () => {
     useArStore.getState().setHeading(123);
     const p = setup();
     fireEvent.click(screen.getByRole('button', { name: '여기에 드롭' }));
-    expect(p.onDrop).toHaveBeenCalledWith({ lat: 37.5, lng: 127.1, accuracy: 30, heading: 123 });
+    expect(p.onDrop).toHaveBeenCalledWith({ lat: 37.5, lng: 127.1, accuracy: 30, heading: 123, user_lat: 37.5, user_lng: 127.1 });
     expect(p.onNotice).not.toHaveBeenCalled();
     expect(p.onClose).toHaveBeenCalledTimes(1);
   });
@@ -80,7 +80,7 @@ describe('FabMenu 여기에 드롭', () => {
     useArStore.getState().setPosition(pos());
     const p = setup();
     fireEvent.click(screen.getByRole('button', { name: '여기에 드롭' }));
-    expect(p.onDrop).toHaveBeenCalledWith({ lat: 37.5665, lng: 126.978, accuracy: 5, heading: 0 });
+    expect(p.onDrop).toHaveBeenCalledWith({ lat: 37.5665, lng: 126.978, accuracy: 5, heading: 0, user_lat: 37.5665, user_lng: 126.978 });
   });
 });
 

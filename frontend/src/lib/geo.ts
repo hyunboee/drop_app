@@ -16,6 +16,31 @@ export function distanceM(a: LatLng, b: LatLng): number {
   return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
+// 반경 밖이면 같은 방향으로 경계까지 줄인다 (드롭 배치, PRM-20)
+export function clampOffset(eastM: number, northM: number, maxM: number): { eastM: number; northM: number } {
+  const d = Math.hypot(eastM, northM);
+  if (d <= maxM) return { eastM, northM };
+  return { eastM: (eastM * maxM) / d, northM: (northM * maxM) / d };
+}
+
+// 동·북으로 m만큼 옮긴 좌표 (수십 m 이내에서 쓰는 평면 근사)
+export function offsetToLatLng(origin: LatLng, eastM: number, northM: number): LatLng {
+  const deg = 180 / Math.PI;
+  return {
+    lat: origin.lat + (northM / EARTH_RADIUS_M) * deg,
+    lng: origin.lng + (eastM / (EARTH_RADIUS_M * Math.cos(toRad(origin.lat)))) * deg,
+  };
+}
+
+// offsetToLatLng의 역: origin에서 p까지 동·북 m
+export function latLngToOffset(origin: LatLng, p: LatLng): { eastM: number; northM: number } {
+  const rad = Math.PI / 180;
+  return {
+    eastM: (p.lng - origin.lng) * rad * EARTH_RADIUS_M * Math.cos(toRad(origin.lat)),
+    northM: (p.lat - origin.lat) * rad * EARTH_RADIUS_M,
+  };
+}
+
 export function isLowAccuracy(accuracy: number): boolean {
   return accuracy > PRM_03_REMEASURE_ACCURACY_M;
 }

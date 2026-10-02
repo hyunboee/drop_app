@@ -13,10 +13,11 @@ const SHARED = [
   'M_10_PASSWORD_MIN_LENGTH',
   'M_11_TITLE_MIN_LENGTH',
   'M_11_TITLE_MAX_LENGTH',
+  'PRM_20_DROP_PLACE_RADIUS_M',
 ] as const;
 
 describe('params', () => {
-  it('FE-01 P-05 공유 상수 7개가 backend/src/params.js와 이름·값 일치', () => {
+  it('FE-01 P-05 공유 상수 8개가 backend/src/params.js와 이름·값 일치', () => {
     for (const name of SHARED) {
       const m = new RegExp(`export const ${name} = (\\d+);`).exec(backend);
       expect(m, `backend에 ${name} 없음`).not.toBeNull();

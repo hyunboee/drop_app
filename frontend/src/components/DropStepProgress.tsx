@@ -25,7 +25,7 @@ function failureOf(stage: Stage, error: unknown): Failure {
   if (stage !== 'publish') return { message: '업로드에 실패했어요', action: 'retry' };
   const message = messageOf(error);
   const code = error instanceof ApiError ? error.code : null;
-  if (code === 'MODERATION_REJECTED' || code === 'LOW_ACCURACY') return { message, action: 'confirm' };
+  if (code === 'MODERATION_REJECTED' || code === 'LOW_ACCURACY' || code === 'DROP_TOO_FAR') return { message, action: 'confirm' };
   if (code === 'VALIDATION_FAILED' || code === 'MEDIA_ALREADY_USED') return { message, action: 'reselect' };
   return { message, action: 'retry' };
 }

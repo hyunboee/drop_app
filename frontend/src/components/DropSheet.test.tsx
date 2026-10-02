@@ -7,7 +7,7 @@ import { mockFetch } from '../test/mockFetch';
 import { installFakeCanvas } from '../test/canvas';
 import { renderWithProviders, resetStores } from '../test/render';
 
-const ANCHOR = { lat: 37.5, lng: 127.1, accuracy: 8, heading: 90 };
+const ANCHOR = { lat: 37.5, lng: 127.1, accuracy: 8, heading: 90, user_lat: 37.50003, user_lng: 127.1 };
 const HEADERS = { 'Content-Type': 'image/jpeg', 'If-None-Match': '*', 'x-amz-tagging': 'status=pending' };
 const EXPIRES = new Date(2026, 10, 30, 12).toISOString();
 

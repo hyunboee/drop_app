@@ -7,11 +7,14 @@ import { Button } from './Button';
 import styles from './FabMenu.module.css';
 import type { NoticeState } from './Notice';
 
+// lat·lng는 캡슐을 놓을 자리, user_lat·user_lng는 드롭하는 사람의 위치 (게시 요청 본문에 그대로 실린다, BE-12)
 export interface Anchor {
   lat: number;
   lng: number;
   accuracy: number;
   heading: number;
+  user_lat: number;
+  user_lng: number;
 }
 
 interface FabMenuProps {
@@ -33,7 +36,7 @@ export function FabMenu({ onClose, onDrop, onNotice }: FabMenuProps) {
     const { position, heading } = useArStore.getState();
     if (!position || isLowAccuracy(position.accuracy)) onNotice({ kind: 'drop_remeasure' });
     // ponytail: 방향 센서 값이 아직 없으면 0 (앵커 heading은 저장만 하고 렌더링에 안 씀)
-    else onDrop({ lat: position.lat, lng: position.lng, accuracy: position.accuracy, heading: heading ?? 0 });
+    else onDrop({ lat: position.lat, lng: position.lng, accuracy: position.accuracy, heading: heading ?? 0, user_lat: position.lat, user_lng: position.lng });
     onClose();
   };
 

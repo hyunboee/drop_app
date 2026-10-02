@@ -6,6 +6,7 @@ export const ERRORS = {
   VALIDATION_FAILED: { status: 400, message: '입력값을 확인해 주세요' },
   GRADE_NOT_ALLOWED: { status: 400, message: '지금은 브론즈 등급만 드롭할 수 있어요' },
   LOW_ACCURACY: { status: 422, message: '위치 정확도가 낮아요. 잠시 후 다시 시도해 주세요' },
+  DROP_TOO_FAR: { status: 422, message: '내 위치에서 10m 안에만 놓을 수 있어요. 위치를 다시 정해 주세요' },
   OUT_OF_RANGE: { status: 403, message: '캡슐에 더 가까이 가야 열 수 있어요' },
   MODERATION_REJECTED: { status: 422, message: '올릴 수 없는 사진이에요' },
   MODERATION_UNAVAILABLE: { status: 503, message: '사진 검사를 할 수 없어요. 다시 시도해 주세요' },

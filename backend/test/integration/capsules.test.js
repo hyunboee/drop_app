@@ -10,6 +10,7 @@ import {
   M_11_TITLE_MAX_LENGTH,
   PRM_03_REMEASURE_ACCURACY_M,
   PRM_06_BRONZE_TTL_HOURS,
+  PRM_20_DROP_PLACE_RADIUS_M,
 } from '../../src/params.js';
 
 let pool;
@@ -48,16 +49,11 @@ const count = async (sql = 'SELECT count(*) FROM capsules', params) =>
   Number((await pool.query(sql, params)).rows[0].count);
 
 const keysOf = (mediaId) => ({ original: `media/${mediaId}.jpg`, thumb: `media/${mediaId}.thumb.jpg` });
-const capsuleBody = (over = {}) => ({
-  media_id: randomUUID(),
-  title: '첫 캡슐',
-  grade: 'BRONZE',
-  lat: 37.5665,
-  lng: 126.978,
-  accuracy: 5,
-  heading: 90,
-  ...over,
-});
+// 사용자 좌표는 따로 주지 않으면 앵커와 같은 자리 (BE-12)
+const capsuleBody = (over = {}) => {
+  const body = { media_id: randomUUID(), title: '첫 캡슐', grade: 'BRONZE', lat: 37.5665, lng: 126.978, accuracy: 5, heading: 90, ...over };
+  return { user_lat: body.lat, user_lng: body.lng, ...body };
+};
 const publish = (url, cookie, body) => request(url, '/api/capsules', { method: 'POST', cookie, body });
 const args = (fn) => fn.mock.calls.map((c) => c.arguments);
 
@@ -191,6 +187,10 @@ test('BE-06 M-11 제목 0자·41자·문자열 아님, 위경도 범위 밖, acc
     { heading: 360 },
     { heading: -1 },
     { heading: undefined },
+    { user_lat: undefined },
+    { user_lat: 91 },
+    { user_lng: '126.9' },
+    { user_lng: -181 },
     { grade: undefined },
     { grade: 1 },
     { title: '', grade: 'SILVER' }, // 형식 검증이 등급 검사보다 먼저
@@ -249,6 +249,24 @@ test('BE-06 FR-03 accuracy가 PRM-03 재측정 기준과 같으면 201, 초과�
   assertError(low, 422, 'LOW_ACCURACY');
   assert.equal(await count(), 1);
   assert.equal(storage.headObject.mock.callCount(), headCalls);
+});
+
+test('BE-12 FR-03 앵커가 사용자 위치에서 PRM-20과 같으면 201, 넘으면 422 DROP_TOO_FAR이고 HeadObject·검열 없음', async (t) => {
+  const { url, storage, moderation } = await start(t);
+  const user = await loggedIn();
+  // 북쪽으로 d m 떨어진 앵커 (위도 1도 = 지구 반지름 기준 π·R/180 m)
+  const north = (d) => 37.5665 + (d / (Math.PI * 6371000)) * 180;
+
+  const ok = await publish(url, user.cookie, capsuleBody({ user_lat: 37.5665, user_lng: 126.978, lat: north(PRM_20_DROP_PLACE_RADIUS_M - 1e-6) }));
+  assert.equal(ok.status, 201);
+  const { rows } = await pool.query('SELECT lat, lng FROM capsules WHERE id = $1', [ok.body.id]);
+  assert.equal(rows[0].lat, north(PRM_20_DROP_PLACE_RADIUS_M - 1e-6)); // 저장되는 건 앵커 좌표
+  const calls = [storage.headObject.mock.callCount(), moderation.moderate.mock.callCount()];
+
+  const far = await publish(url, user.cookie, capsuleBody({ user_lat: 37.5665, user_lng: 126.978, lat: north(PRM_20_DROP_PLACE_RADIUS_M + 0.01) }));
+  assertError(far, 422, 'DROP_TOO_FAR');
+  assert.equal(await count(), 1);
+  assert.deepEqual([storage.headObject.mock.callCount(), moderation.moderate.mock.callCount()], calls);
 });
 
 // ---------- HeadObject ----------

@@ -6,6 +6,7 @@ export const M_06_PHOTO_MAX_BYTES = 10485760;
 export const M_10_PASSWORD_MIN_LENGTH = 8;
 export const M_11_TITLE_MIN_LENGTH = 1;
 export const M_11_TITLE_MAX_LENGTH = 40;
+export const PRM_20_DROP_PLACE_RADIUS_M = 10;
 
 // 프론트에만 있는 값 (PRD 4.1)
 export const M_02_NEARBY_MIN_INTERVAL_MS = 10000;

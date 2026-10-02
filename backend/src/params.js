@@ -4,6 +4,8 @@ export const PRM_01_OPEN_RADIUS_M = 10;
 export const PRM_03_ACCURACY_CAP_M = 20;
 // PRM-03 재측정 기준
 export const PRM_03_REMEASURE_ACCURACY_M = 30;
+// PRM-20 드롭 배치 반경 (드롭하는 사람 위치에서 앵커까지)
+export const PRM_20_DROP_PLACE_RADIUS_M = 10;
 // PRM-06 브론즈 유효 시간 (30일)
 export const PRM_06_BRONZE_TTL_HOURS = 720;
 // M-01 주변 조회 반경

@@ -1,0 +1,42 @@
+.guide {
+  position: absolute;
+  top: calc(var(--safe-top) + var(--space-6));
+  left: var(--space-gutter);
+  right: var(--space-gutter);
+  z-index: 3;
+  text-align: center;
+  text-shadow: var(--shadow-text);
+  pointer-events: none;
+}
+
+.text {
+  margin: 0;
+  font: var(--type-body);
+  letter-spacing: var(--type-body-ls);
+  color: var(--color-text);
+}
+
+.distance {
+  margin: var(--space-2) 0 0;
+  font: var(--type-distance);
+  letter-spacing: var(--type-distance-ls);
+  color: var(--color-gold-300);
+}
+
+.warn {
+  margin: var(--space-2) 0 0;
+  font: var(--type-caption);
+  letter-spacing: var(--type-caption-ls);
+  color: var(--color-error);
+}
+
+.actions {
+  position: absolute;
+  left: var(--space-gutter);
+  right: var(--space-gutter);
+  bottom: calc(var(--space-6) + var(--safe-bottom));
+  z-index: 3;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}

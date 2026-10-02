@@ -2,7 +2,7 @@ import { createHmac } from 'node:crypto';
 import { mediaKeys } from '../aws/storage.js';
 import { AppError } from '../errors.js';
 import { boundingBox, distanceM, EARTH_RADIUS_M, isLowAccuracy, judgeOpen } from '../lib/geo.js';
-import { M_01_NEARBY_RADIUS_M, M_06_PHOTO_MAX_BYTES, PRM_06_BRONZE_TTL_HOURS } from '../params.js';
+import { M_01_NEARBY_RADIUS_M, M_06_PHOTO_MAX_BYTES, PRM_06_BRONZE_TTL_HOURS, PRM_20_DROP_PLACE_RADIUS_M } from '../params.js';
 import {
   findActiveCapsuleById,
   findCapsuleByMediaId,
@@ -23,12 +23,14 @@ function existingResult(existing, userId) {
 
 export async function publishCapsule(
   { pool, storage, moderation },
-  { userId, mediaId, title, grade, lat, lng, accuracy, heading },
+  { userId, mediaId, title, grade, lat, lng, accuracy, heading, userLat, userLng },
 ) {
   const existing = await findCapsuleByMediaId(pool, mediaId);
   if (existing) return existingResult(existing, userId);
 
   if (isLowAccuracy(accuracy)) throw new AppError('LOW_ACCURACY');
+  // 사용자 좌표는 배치 거리 검증에만 쓰고 저장하지 않는다 (PRM-20)
+  if (distanceM({ lat: userLat, lng: userLng }, { lat, lng }) > PRM_20_DROP_PLACE_RADIUS_M) throw new AppError('DROP_TOO_FAR');
 
   const keys = mediaKeys(mediaId);
   for (const key of [keys.original, keys.thumb]) {

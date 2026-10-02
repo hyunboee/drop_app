@@ -26,6 +26,7 @@ const MESSAGES: Record<string, string> = {
   EMAIL_TAKEN: '이미 가입된 이메일이에요',
   VALIDATION_FAILED: '입력값을 확인해 주세요',
   LOW_ACCURACY: '위치 정확도가 낮아요. 잠시 후 다시 시도해 주세요',
+  DROP_TOO_FAR: '내 위치에서 10m 안에만 놓을 수 있어요. 위치를 다시 정해 주세요',
   MODERATION_REJECTED: '올릴 수 없는 사진이에요',
   MODERATION_UNAVAILABLE: '사진 검사를 할 수 없어요. 다시 시도해 주세요',
   MEDIA_ALREADY_USED: '이미 사용된 미디어예요',

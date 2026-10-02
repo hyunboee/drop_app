@@ -9,6 +9,8 @@ import { fireOrientation, mockGeolocation } from '../test/browser';
 import { installFakeCanvas } from '../test/canvas';
 import { renderWithProviders, resetStores } from '../test/render';
 import { nearby, northOf, pos } from '../test/samples';
+import { lastArSceneProps } from '../test/arSceneStub';
+import { distanceM } from '../lib/geo';
 
 const NEARBY = /^\/api\/capsules\/nearby\?/;
 const HERE = pos();
@@ -122,6 +124,7 @@ describe('ArScreen 드롭 시트 (FE-09·FE-10)', () => {
     emit(geo, pos({ accuracy: 30 }));
     click('메뉴 열기');
     click('여기에 드롭');
+    click('여기에 놓기');
     expect(screen.getByText('1/4')).toBeTruthy();
     noMenu();
     click('시트 닫기');
@@ -133,6 +136,7 @@ describe('ArScreen 드롭 시트 (FE-09·FE-10)', () => {
     emit(geo);
     click('메뉴 열기');
     click('여기에 드롭');
+    click('여기에 놓기');
     fireEvent.click(screen.getByRole('button', { name: '메뉴 열기' }));
     noMenu();
   });
@@ -146,6 +150,10 @@ describe('ArScreen 드롭 시트 (FE-09·FE-10)', () => {
 
     click('메뉴 열기');
     click('여기에 드롭');
+    // 프레임을 북쪽 6m로 끌어 놓는다
+    const placed = northOf({ lat: 37.5, lng: 127.1 }, 6);
+    act(() => lastArSceneProps.current!.onPlaceMove!(placed));
+    click('여기에 놓기');
     fireEvent.change(screen.getByLabelText('사진 선택'), {
       target: { files: [new File(['x'], 'a.jpg', { type: 'image/jpeg' })] },
     });
@@ -159,16 +167,73 @@ describe('ArScreen 드롭 시트 (FE-09·FE-10)', () => {
       media_id: 'm1',
       title: '우리 동네',
       grade: 'BRONZE',
-      lat: 37.5,
-      lng: 127.1,
+      lat: expect.closeTo(placed.lat, 9),
+      lng: expect.closeTo(placed.lng, 9),
       accuracy: 8,
       heading: 90,
+      user_lat: 37.5,
+      user_lng: 127.1,
     });
     await waitFor(() => expect(f.callsTo('GET', NEARBY)).toHaveLength(2));
 
     click('확인');
     expect(screen.queryByText('4/4')).toBeNull();
     expect(screen.getByRole('button', { name: '메뉴 열기' })).toBeTruthy();
+  });
+});
+
+describe('ArScreen 드롭 위치 정하기 (FE-13)', () => {
+  const placeFrame = () => screen.getByTestId('place-frame');
+  const framePos = () => ({ lat: Number(placeFrame().dataset.lat), lng: Number(placeFrame().dataset.lng) });
+  const confirmButton = () => screen.getByRole('button', { name: '여기에 놓기' }) as HTMLButtonElement;
+
+  it('FE-13 FR-03 "여기에 드롭"은 시트 대신 W-13을 열고 FAB를 숨긴다, "취소"로 W-05', () => {
+    const { geo } = setup();
+    emit(geo);
+    click('메뉴 열기');
+    click('여기에 드롭');
+    expect(screen.getByText('프레임을 끌어 놓을 곳을 정하세요')).toBeTruthy();
+    expect(screen.getByText('내 위치에서 3m')).toBeTruthy();
+    expect(screen.queryByText('1/4')).toBeNull();
+    expect(screen.queryByRole('button', { name: '메뉴 열기' })).toBeNull();
+    expect(distanceM(HERE, framePos())).toBeCloseTo(3, 1);
+    click('취소');
+    expect(screen.queryByTestId('place-frame')).toBeNull();
+    expect(screen.getByRole('button', { name: '메뉴 열기' })).toBeTruthy();
+  });
+
+  it('FE-13 PRM-20 반경 밖으로 끌면 같은 방향 10m 경계에서 멈춘다', () => {
+    const { geo } = setup();
+    emit(geo);
+    click('메뉴 열기');
+    click('여기에 드롭');
+    act(() => lastArSceneProps.current!.onPlaceMove!(northOf(HERE, 30)));
+    expect(distanceM(HERE, framePos())).toBeCloseTo(10, 1);
+    expect(framePos().lng).toBeCloseTo(HERE.lng, 9);
+    expect(screen.getByText('내 위치에서 10m')).toBeTruthy();
+    expect(confirmButton().disabled).toBe(false);
+  });
+
+  it('FE-13 정한 뒤 걸어서 10m를 넘게 멀어지면 "여기에 놓기" 비활성 + 안내', () => {
+    const { geo } = setup();
+    emit(geo);
+    click('메뉴 열기');
+    click('여기에 드롭');
+    act(() => lastArSceneProps.current!.onPlaceMove!(northOf(HERE, 8)));
+    emit(geo, pos(northOf(HERE, -5)));
+    expect(confirmButton().disabled).toBe(true);
+    expect(screen.getByText('내 위치에서 10m 안에만 놓을 수 있어요')).toBeTruthy();
+  });
+
+  it('FE-13 FR-03 놓는 순간 정확도가 나쁘면 시트를 열지 않고 드롭 재측정 안내', () => {
+    const { geo } = setup();
+    emit(geo);
+    click('메뉴 열기');
+    click('여기에 드롭');
+    emit(geo, pos({ accuracy: 30.01 }));
+    click('여기에 놓기');
+    expect(screen.getByText('GPS 정확도가 낮아 드롭할 수 없어요. 잠시 후 다시 시도해 주세요')).toBeTruthy();
+    expect(screen.queryByText('1/4')).toBeNull();
   });
 });
 

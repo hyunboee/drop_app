@@ -11,7 +11,7 @@ import { nearby, pos } from '../test/samples';
 
 const NEARBY = /^\/api\/capsules\/nearby\?/;
 const EXPIRES = new Date(2026, 10, 30, 12).toISOString();
-const CREATE_VARS = { media_id: 'm1', title: '제목', lat: 37.5, lng: 127.1, accuracy: 8, heading: 90 };
+const CREATE_VARS = { media_id: 'm1', title: '제목', lat: 37.5, lng: 127.1, accuracy: 8, heading: 90, user_lat: 37.5, user_lng: 127.1 };
 
 // 주변 조회 쿼리를 활성 상태로 두고 mutation 훅을 함께 쓴다
 function setup<T>(useMutationHook: () => T) {

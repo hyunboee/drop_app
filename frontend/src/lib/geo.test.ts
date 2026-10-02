@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { distanceM, isLowAccuracy, judgeOpen, formatRemaining, toHeading, frameState } from './geo';
+import { clampOffset, distanceM, isLowAccuracy, judgeOpen, formatRemaining, latLngToOffset, offsetToLatLng, toHeading, frameState } from './geo';
 import { northOf } from '../test/samples';
 
 const base = { lat: 37.5665, lng: 126.978 };
@@ -185,5 +185,32 @@ describe('frameState (FE-07)', () => {
     const s = frameState(northOf(here, 40.5), { ...here, accuracy: 50 });
     expect(s.remainingM).toBeCloseTo(judgeOpen(distanceM(here, northOf(here, 40.5)), 50).remainingM, 9);
     expect(s.openable).toBe(false);
+  });
+});
+
+describe('드롭 배치 (FE-13)', () => {
+  it('FE-13 FR-03 clampOffset: 반경 안은 그대로, 반경 밖은 같은 방향으로 PRM-20 경계까지', () => {
+    expect(clampOffset(3, 4, 10)).toEqual({ eastM: 3, northM: 4 });
+    expect(clampOffset(6, 8, 10)).toEqual({ eastM: 6, northM: 8 });
+    const c = clampOffset(30, 40, 10);
+    expect(c.eastM).toBeCloseTo(6, 9);
+    expect(c.northM).toBeCloseTo(8, 9);
+  });
+
+  it('FE-13 FR-03 offsetToLatLng: 옮긴 좌표까지 distanceM이 이동 거리와 0.1m 안에서 같다', () => {
+    for (const [e, n] of [[0, 3], [5, 0], [-6, 8], [7.07, -7.07]]) {
+      const moved = offsetToLatLng(base, e, n);
+      expect(Math.abs(distanceM(base, moved) - Math.hypot(e, n))).toBeLessThan(0.1);
+    }
+    const north = offsetToLatLng(base, 0, 10);
+    expect(north.lng).toBe(base.lng);
+    expect(north.lat).toBeGreaterThan(base.lat);
+    expect(offsetToLatLng(base, 10, 0).lng).toBeGreaterThan(base.lng);
+  });
+
+  it('FE-13 latLngToOffset은 offsetToLatLng의 역', () => {
+    const o = latLngToOffset(base, offsetToLatLng(base, -6, 8));
+    expect(o.eastM).toBeCloseTo(-6, 6);
+    expect(o.northM).toBeCloseTo(8, 6);
   });
 });

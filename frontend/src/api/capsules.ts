@@ -56,7 +56,7 @@ export function useCreateCapsule() {
   return useMutation<
     { id: string; expires_at: string },
     ApiError,
-    { media_id: string; title: string; lat: number; lng: number; accuracy: number; heading: number }
+    { media_id: string; title: string; lat: number; lng: number; accuracy: number; heading: number; user_lat: number; user_lng: number }
   >({
     mutationFn: (body) => api('/api/capsules', { method: 'POST', body: { ...body, grade: 'BRONZE' } }),
     onSuccess: () => client.invalidateQueries({ queryKey: nearbyKey }),
