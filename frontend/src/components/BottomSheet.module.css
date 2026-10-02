@@ -1,0 +1,74 @@
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: var(--color-scrim);
+}
+
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 6;
+  box-sizing: border-box;
+  padding: var(--space-3) var(--space-5) calc(var(--space-5) + var(--safe-bottom));
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--color-surface);
+  backdrop-filter: var(--blur-glass);
+  box-shadow: var(--shadow-float);
+  animation: rise var(--duration) var(--ease);
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+.handle {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto var(--space-3);
+  background: var(--color-line-subtle);
+}
+
+.head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 24px;
+  margin-bottom: var(--space-4);
+}
+
+.dots {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.dots i {
+  width: 6px;
+  height: 6px;
+  box-sizing: border-box;
+  border: 1px solid var(--color-line-subtle);
+  border-radius: var(--radius-round);
+}
+
+.dots i.on {
+  border-color: var(--color-gold-500);
+  background: var(--color-gold-500);
+}
+
+.step {
+  font: var(--type-label);
+  letter-spacing: var(--type-label-ls);
+  color: var(--color-text-sub);
+}
+
+.close {
+  position: absolute;
+  right: 0;
+  top: 0;
+  color: var(--color-text-sub);
+}

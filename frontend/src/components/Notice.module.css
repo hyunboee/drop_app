@@ -1,0 +1,34 @@
+.notice {
+  position: absolute;
+  left: var(--space-gutter);
+  right: var(--space-gutter);
+  bottom: calc(var(--space-6) + var(--safe-bottom) + 64px + var(--space-5));
+  z-index: 4;
+  padding: var(--space-5);
+  border-radius: var(--radius-sheet);
+  background: var(--color-surface);
+  backdrop-filter: var(--blur-glass);
+  box-shadow: var(--shadow-float);
+}
+
+.text {
+  margin: 0;
+  font: var(--type-body);
+  letter-spacing: var(--type-body-ls);
+  color: var(--color-text);
+}
+
+.distance {
+  font: var(--type-distance);
+  letter-spacing: var(--type-distance-ls);
+  color: var(--color-gold-300);
+}
+
+.action {
+  width: 120px;
+  margin: var(--space-4) 0 0 auto;
+}
+
+.action button {
+  height: 40px;
+}

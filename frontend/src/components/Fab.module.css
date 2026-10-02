@@ -1,0 +1,26 @@
+.fab {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--space-6) + var(--safe-bottom));
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-left: -32px;
+  border: 1.5px solid var(--color-gold-500);
+  border-radius: var(--radius-round);
+  background: var(--color-fab-bg);
+  backdrop-filter: var(--blur-glass);
+  box-shadow: var(--shadow-float);
+  color: var(--color-gold-300);
+}
+
+.icon,
+.iconOpen {
+  transition: transform var(--duration) var(--ease);
+}
+
+.iconOpen {
+  transform: rotate(45deg);
+}

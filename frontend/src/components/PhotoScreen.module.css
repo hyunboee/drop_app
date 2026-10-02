@@ -1,0 +1,61 @@
+.screen {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.bg,
+.bgBlur,
+.read {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.bg,
+.bgBlur {
+  object-fit: cover;
+}
+
+.bgBlur {
+  filter: var(--filter-photo-blur);
+}
+
+.read {
+  background: var(--gradient-read);
+}
+
+.content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--space-gutter);
+  overflow-y: auto;
+}
+
+.wordmark {
+  margin-top: var(--space-6);
+  text-align: center;
+}
+
+.display {
+  margin: 0;
+  font: var(--type-display);
+  letter-spacing: var(--type-display-ls);
+  text-indent: var(--type-display-ls);
+  background: var(--gradient-gold-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.tagline {
+  margin: var(--space-4) 0 0;
+  font: var(--type-tagline);
+  letter-spacing: var(--type-tagline-ls);
+  text-indent: var(--type-tagline-ls);
+  color: var(--color-text-sub);
+}

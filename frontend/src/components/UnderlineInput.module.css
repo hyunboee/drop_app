@@ -1,0 +1,45 @@
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--space-2);
+}
+
+.label {
+  font: var(--type-label);
+  letter-spacing: var(--type-label-ls);
+  color: var(--color-text-sub);
+}
+
+.counter {
+  font: var(--type-label);
+  letter-spacing: var(--type-label-ls);
+  color: var(--color-text-muted);
+}
+
+.input {
+  display: block;
+  width: 100%;
+  padding-bottom: var(--space-2);
+  font: var(--type-body);
+  letter-spacing: var(--type-body-ls);
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-line);
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.input:focus {
+  border-bottom: 2px solid var(--color-gold-300);
+  margin-bottom: -1px;
+}
+
+.error {
+  margin: var(--space-3) 0 0;
+  font: var(--type-caption);
+  letter-spacing: var(--type-caption-ls);
+  color: var(--color-error);
+}

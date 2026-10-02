@@ -1,0 +1,20 @@
+.banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  height: calc(40px + var(--safe-top));
+  padding-top: var(--safe-top);
+  border-radius: var(--radius-none);
+  background: var(--color-warning-bg);
+  backdrop-filter: var(--blur-glass);
+  font: var(--type-caption);
+  letter-spacing: var(--type-caption-ls);
+  color: var(--color-warning);
+}

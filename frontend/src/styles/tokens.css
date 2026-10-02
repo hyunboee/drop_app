@@ -1,0 +1,73 @@
+:root {
+  /* 색상 */
+  --color-bg: #0b0907;
+  --color-surface: rgba(18, 14, 10, 0.86);
+  --color-scrim: rgba(5, 4, 10, 0.55);
+  --color-text: #e9e0cc;
+  --color-text-sub: #c8b791;
+  --color-text-muted: #8d7f66;
+  --color-text-on-gold: #2b2213;
+  --color-gold-100: #f3df9f;
+  --color-gold-300: #e9d39a;
+  --color-gold-500: #c9a24f;
+  --color-gold-700: #8a6a2c;
+  --color-line: #a8905f;
+  --color-line-subtle: rgba(200, 183, 145, 0.24);
+  --color-warning: #e6c36a;
+  --color-warning-bg: rgba(60, 44, 14, 0.82);
+  --color-error: #e3a089;
+  --color-frame-in: #e9d39a;
+  --color-frame-out: rgba(233, 211, 154, 0.38);
+  --color-fab-bg: rgba(18, 14, 10, 0.72);
+  --gradient-gold: linear-gradient(90deg, #b8924a 0%, #e9d39a 35%, #d1b06b 60%, #a07c38 100%);
+  --gradient-gold-text: linear-gradient(180deg, #f3df9f 0%, #c9a24f 50%, #8a6a2c 100%);
+  --gradient-read: linear-gradient(180deg, rgba(5, 4, 10, 0.16) 0%, rgba(5, 4, 10, 0) 26%, rgba(5, 4, 10, 0) 64%, rgba(5, 4, 10, 0.2) 100%);
+
+  /* 간격 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-gutter: 40px;
+  --safe-bottom: env(safe-area-inset-bottom);
+  --safe-top: env(safe-area-inset-top);
+
+  /* 서체 */
+  --font-sans: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", Roboto, sans-serif;
+  --font-serif: "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-mono-digit: ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* 타입: --type-x = font 단축값(굵기 크기/행간 서체), --type-x-ls = letter-spacing */
+  --type-display: 400 40px/1 var(--font-serif);
+  --type-display-ls: 0.42em;
+  --type-tagline: 400 12px/1.4 var(--font-sans);
+  --type-tagline-ls: 0.42em;
+  --type-title: 600 18px/1.4 var(--font-sans);
+  --type-title-ls: 0.02em;
+  --type-body: 400 15px/1.5 var(--font-sans);
+  --type-body-ls: 0;
+  --type-label: 500 11px/1.4 var(--font-sans);
+  --type-label-ls: 0.04em;
+  --type-caption: 400 11.5px/1.5 var(--font-sans);
+  --type-caption-ls: 0;
+  --type-button: 500 14px/1 var(--font-sans);
+  --type-button-ls: 0.6em;
+  --type-link: 500 12px/1.4 var(--font-sans);
+  --type-link-ls: 0;
+  --type-distance: 600 13px/1 var(--font-mono-digit);
+  --type-distance-ls: 0.02em;
+
+  /* 기타 */
+  --radius-none: 0;
+  --radius-sheet: 16px;
+  --radius-round: 50%;
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-text: 0 1px 3px rgba(0, 0, 0, 0.8);
+  --blur-glass: blur(14px);
+  --filter-photo-blur: blur(6px) brightness(0.7);
+  --duration: 200ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
