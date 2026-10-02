@@ -5,12 +5,12 @@ import { formatRemaining, frameState } from '../lib/geo';
 import { log } from '../lib/log';
 import { useSession } from '../stores/session';
 import { mockFetch, apiError, type MockReply, type MockRoute } from '../test/mockFetch';
-import { fireOrientation, mockGeolocation } from '../test/browser';
+import { mockGeolocation } from '../test/browser';
 import { installFakeCanvas } from '../test/canvas';
 import { renderWithProviders, resetStores } from '../test/render';
 import { nearby, northOf, pos } from '../test/samples';
 import { lastArSceneProps } from '../test/arSceneStub';
-import { distanceM } from '../lib/geo';
+import { distanceM, offsetToLatLng } from '../lib/geo';
 
 const NEARBY = /^\/api\/capsules\/nearby\?/;
 const HERE = pos();
@@ -118,13 +118,25 @@ describe('ArScreen FAB 메뉴·Notice (FE-08)', () => {
   });
 });
 
+// 드롭 순서: 여기에 드롭 → W-07 사진 → 다음 → W-13 위치·방향 → 여기에 놓기 → W-08 제목 (FE-14)
+const pickPhoto = () =>
+  fireEvent.change(screen.getByLabelText('사진 선택'), {
+    target: { files: [new File(['x'], 'a.jpg', { type: 'image/jpeg' })] },
+  });
+const toPlacing = () => {
+  click('메뉴 열기');
+  click('여기에 드롭');
+  pickPhoto();
+  click('다음');
+};
+const slider = () => screen.getByLabelText(/방향/) as HTMLInputElement;
+
 describe('ArScreen 드롭 시트 (FE-09·FE-10)', () => {
   it('FE-09 FR-03 accuracy 30은 시트("1/4")가 열린다, "시트 닫기"로 닫힌다', async () => {
     const { geo } = setup();
     emit(geo, pos({ accuracy: 30 }));
     click('메뉴 열기');
     click('여기에 드롭');
-    click('여기에 놓기');
     expect(screen.getByText('1/4')).toBeTruthy();
     noMenu();
     click('시트 닫기');
@@ -136,28 +148,23 @@ describe('ArScreen 드롭 시트 (FE-09·FE-10)', () => {
     emit(geo);
     click('메뉴 열기');
     click('여기에 드롭');
-    click('여기에 놓기');
     fireEvent.click(screen.getByRole('button', { name: '메뉴 열기' }));
     noMenu();
   });
 
-  it('FE-10 FR-06·FR-07 드롭 전 흐름: heading이 앵커로 게시되고, 완료 후 주변 재조회, 확인으로 시트 닫힘', async () => {
+  it('FE-10·FE-14 드롭 전 흐름: 놓은 자리·슬라이더 방향이 앵커로 게시되고, 완료 후 주변 재조회, 확인으로 시트 닫힘', async () => {
     installFakeCanvas({ width: 4000, height: 3000 });
     const { geo, f } = setup([], dropRoutes());
     emit(geo, pos({ lat: 37.5, lng: 127.1, accuracy: 8 }));
-    act(() => fireOrientation('deviceorientation', { webkitCompassHeading: 90 }));
     await waitFor(() => expect(f.callsTo('GET', NEARBY)).toHaveLength(1));
 
-    click('메뉴 열기');
-    click('여기에 드롭');
-    // 프레임을 북쪽 6m로 끌어 놓는다
+    toPlacing();
+    // 프레임을 북쪽 6m로 끌고 방향을 45°로 돌려 놓는다
     const placed = northOf({ lat: 37.5, lng: 127.1 }, 6);
     act(() => lastArSceneProps.current!.onPlaceMove!(placed));
+    fireEvent.change(slider(), { target: { value: '45' } });
     click('여기에 놓기');
-    fireEvent.change(screen.getByLabelText('사진 선택'), {
-      target: { files: [new File(['x'], 'a.jpg', { type: 'image/jpeg' })] },
-    });
-    click('다음');
+    expect(screen.getByText('2/4')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('제목'), { target: { value: '우리 동네' } });
     click('드롭하기');
 
@@ -170,7 +177,7 @@ describe('ArScreen 드롭 시트 (FE-09·FE-10)', () => {
       lat: expect.closeTo(placed.lat, 9),
       lng: expect.closeTo(placed.lng, 9),
       accuracy: 8,
-      heading: 90,
+      heading: 45,
       user_lat: 37.5,
       user_lng: 127.1,
     });
@@ -182,31 +189,62 @@ describe('ArScreen 드롭 시트 (FE-09·FE-10)', () => {
   });
 });
 
-describe('ArScreen 드롭 위치 정하기 (FE-13)', () => {
+describe('ArScreen 드롭 위치·방향 정하기 (FE-13·FE-14)', () => {
   const placeFrame = () => screen.getByTestId('place-frame');
   const framePos = () => ({ lat: Number(placeFrame().dataset.lat), lng: Number(placeFrame().dataset.lng) });
   const confirmButton = () => screen.getByRole('button', { name: '여기에 놓기' }) as HTMLButtonElement;
 
-  it('FE-13 FR-03 "여기에 드롭"은 시트 대신 W-13을 열고 FAB를 숨긴다, "취소"로 W-05', () => {
+  it('FE-14 FR-03 사진을 고르고 "다음" → 시트를 숨기고 W-13, 미리보기에 고른 사진, FAB 숨김', () => {
     const { geo } = setup();
     emit(geo);
-    click('메뉴 열기');
-    click('여기에 드롭');
+    toPlacing();
     expect(screen.getByText('프레임을 끌어 놓을 곳을 정하세요')).toBeTruthy();
     expect(screen.getByText('내 위치에서 3m')).toBeTruthy();
-    expect(screen.queryByText('1/4')).toBeNull();
+    expect(screen.queryByText('2/4')).toBeNull();
     expect(screen.queryByRole('button', { name: '메뉴 열기' })).toBeNull();
     expect(distanceM(HERE, framePos())).toBeCloseTo(3, 1);
+    expect(lastArSceneProps.current!.placeImage).toMatch(/^blob:/);
+  });
+
+  it('FE-14 W-13 "취소"는 시트까지 닫고 W-05로 돌아간다', () => {
+    const { geo } = setup();
+    emit(geo);
+    toPlacing();
     click('취소');
     expect(screen.queryByTestId('place-frame')).toBeNull();
+    expect(screen.queryByText('1/4')).toBeNull();
+    expect(screen.queryByText('2/4')).toBeNull();
     expect(screen.getByRole('button', { name: '메뉴 열기' })).toBeTruthy();
+  });
+
+  it('FE-14 슬라이더를 움직이기 전에는 프레임이 나를 바라본다(동쪽 5m → 270°), 움직인 뒤에는 끌어도 유지', () => {
+    const { geo } = setup();
+    emit(geo);
+    toPlacing();
+    expect(slider().value).toBe('180'); // 처음엔 북쪽 3m → 남쪽(나)을 본다
+    act(() => lastArSceneProps.current!.onPlaceMove!(offsetToLatLng(HERE, 5, 0)));
+    expect(slider().value).toBe('270');
+    expect(lastArSceneProps.current!.placeHeading).toBe(270);
+    fireEvent.change(slider(), { target: { value: '10' } });
+    act(() => lastArSceneProps.current!.onPlaceMove!(northOf(HERE, 5)));
+    expect(slider().value).toBe('10');
+  });
+
+  it('FE-14 위치를 정한 뒤 W-08 "이전" → W-07 "다음"은 W-13 없이 W-08로 간다', () => {
+    const { geo } = setup();
+    emit(geo);
+    toPlacing();
+    click('여기에 놓기');
+    click('‹ 이전');
+    click('다음');
+    expect(screen.getByText('2/4')).toBeTruthy();
+    expect(screen.queryByTestId('place-frame')).toBeNull();
   });
 
   it('FE-13 PRM-20 반경 밖으로 끌면 같은 방향 10m 경계에서 멈춘다', () => {
     const { geo } = setup();
     emit(geo);
-    click('메뉴 열기');
-    click('여기에 드롭');
+    toPlacing();
     act(() => lastArSceneProps.current!.onPlaceMove!(northOf(HERE, 30)));
     expect(distanceM(HERE, framePos())).toBeCloseTo(10, 1);
     expect(framePos().lng).toBeCloseTo(HERE.lng, 9);
@@ -217,23 +255,21 @@ describe('ArScreen 드롭 위치 정하기 (FE-13)', () => {
   it('FE-13 정한 뒤 걸어서 10m를 넘게 멀어지면 "여기에 놓기" 비활성 + 안내', () => {
     const { geo } = setup();
     emit(geo);
-    click('메뉴 열기');
-    click('여기에 드롭');
+    toPlacing();
     act(() => lastArSceneProps.current!.onPlaceMove!(northOf(HERE, 8)));
     emit(geo, pos(northOf(HERE, -5)));
     expect(confirmButton().disabled).toBe(true);
     expect(screen.getByText('내 위치에서 10m 안에만 놓을 수 있어요')).toBeTruthy();
   });
 
-  it('FE-13 FR-03 놓는 순간 정확도가 나쁘면 시트를 열지 않고 드롭 재측정 안내', () => {
+  it('FE-13 FR-03 놓는 순간 정확도가 나쁘면 제목 단계로 가지 않고 드롭 재측정 안내', () => {
     const { geo } = setup();
     emit(geo);
-    click('메뉴 열기');
-    click('여기에 드롭');
+    toPlacing();
     emit(geo, pos({ accuracy: 30.01 }));
     click('여기에 놓기');
     expect(screen.getByText('GPS 정확도가 낮아 드롭할 수 없어요. 잠시 후 다시 시도해 주세요')).toBeTruthy();
-    expect(screen.queryByText('1/4')).toBeNull();
+    expect(screen.queryByText('2/4')).toBeNull();
   });
 });
 

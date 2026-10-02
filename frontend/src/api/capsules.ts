@@ -9,6 +9,8 @@ export interface NearbyCapsule {
   title: string;
   lat: number;
   lng: number;
+  // 프레임이 바라보는 방위 (북 0°, 시계 방향, BE-13)
+  heading: number;
   thumb_url: string;
   is_mine: boolean;
 }

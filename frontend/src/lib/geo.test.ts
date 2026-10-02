@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { clampOffset, distanceM, isLowAccuracy, judgeOpen, formatRemaining, latLngToOffset, offsetToLatLng, toHeading, frameState } from './geo';
+import { bearingDeg, clampOffset, distanceM, isLowAccuracy, judgeOpen, formatRemaining, latLngToOffset, offsetToLatLng, toHeading, frameState } from './geo';
 import { northOf } from '../test/samples';
 
 const base = { lat: 37.5665, lng: 126.978 };
@@ -206,6 +206,14 @@ describe('드롭 배치 (FE-13)', () => {
     expect(north.lng).toBe(base.lng);
     expect(north.lat).toBeGreaterThan(base.lat);
     expect(offsetToLatLng(base, 10, 0).lng).toBeGreaterThan(base.lng);
+  });
+
+  it('FE-14 bearingDeg: 북·동·남·서 = 0·90·180·270', () => {
+    const [n, e, s, w] = [[0, 5], [5, 0], [0, -5], [-5, 0]].map(([x, y]) => bearingDeg(base, offsetToLatLng(base, x, y)));
+    expect(n).toBeCloseTo(0, 6);
+    expect(e).toBeCloseTo(90, 6);
+    expect(s).toBeCloseTo(180, 6);
+    expect(w).toBeCloseTo(270, 6);
   });
 
   it('FE-13 latLngToOffset은 offsetToLatLng의 역', () => {

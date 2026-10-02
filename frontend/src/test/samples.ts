@@ -6,6 +6,7 @@ export interface NearbyCapsuleSample {
   title: string;
   lat: number;
   lng: number;
+  heading: number;
   thumb_url: string;
   is_mine: boolean;
 }
@@ -16,6 +17,7 @@ export function nearby(over: Partial<NearbyCapsuleSample> = {}): NearbyCapsuleSa
     title: '캡슐',
     lat: 37.5665,
     lng: 126.978,
+    heading: 0,
     thumb_url: '/api/media/m1/thumb',
     is_mine: false,
     ...over,

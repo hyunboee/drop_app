@@ -9,6 +9,8 @@ interface StubProps {
   frames: StubFrame[];
   onTap(id: string): void;
   placeAt?: { lat: number; lng: number } | null;
+  placeHeading?: number;
+  placeImage?: string | null;
   onPlaceMove?(target: { lat: number; lng: number }): void;
 }
 

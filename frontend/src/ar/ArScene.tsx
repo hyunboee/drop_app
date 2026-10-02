@@ -7,6 +7,7 @@ export interface ArFrame {
   title: string;
   lat: number;
   lng: number;
+  heading: number;
   thumbUrl: string;
   openable: boolean;
   remainingLabel: string | null;
@@ -16,10 +17,15 @@ export interface ArSceneProps {
   onTap(capsuleId: string): void;
   // W-13 드롭 위치 정하기 중인 미리보기 프레임 좌표 (null이면 안 그린다)
   placeAt?: { lat: number; lng: number } | null;
+  placeHeading?: number;
+  // 미리보기 프레임에 담을 고른 사진 (Object URL)
+  placeImage?: string | null;
   onPlaceMove?(target: { lat: number; lng: number }): void;
 }
 
 const FRAME_SIZE = 3;
+// heading = 프레임 앞면이 바라보는 방위(북 0°, 시계 방향). 평면 앞면 기본 방향은 +z(남쪽, 180°)
+const yaw = (heading: number) => `0 ${180 - heading} 0`;
 const PLACE_START_M = 3;
 // AR.js gps-new-camera 월드 좌표는 스페리컬 메르카토르(x = 동, z = -북). 실제 m = 월드 단위 × cos(위도)
 const HALF_EARTH = 20037508.34;
@@ -35,7 +41,7 @@ const token = (name: string) => getComputedStyle(document.documentElement).getPr
 // 알파가 있는 토큰(--color-frame-out)은 색과 opacity로 분리한다
 const alphaOf = (color: string) => Number(color.split(',')[3]?.replace(')', '')) || 1;
 
-export default function ArScene({ frames, onTap, placeAt = null, onPlaceMove }: ArSceneProps) {
+export default function ArScene({ frames, onTap, placeAt = null, placeHeading = 0, placeImage = null, onPlaceMove }: ArSceneProps) {
   const sceneRef = useRef<HTMLElement>(null);
   const previewRef = useRef<HTMLElement>(null);
   const onTapRef = useRef(onTap);
@@ -141,7 +147,7 @@ export default function ArScene({ frames, onTap, placeAt = null, onPlaceMove }: 
     >
       <a-camera gps-new-camera="gpsMinDistance: 5" />
       {frames.map((f) => (
-        <a-entity key={f.id} gps-new-entity-place={`latitude: ${f.lat}; longitude: ${f.lng}`} data-capsule-id={f.id} class="capsule-frame">
+        <a-entity key={f.id} gps-new-entity-place={`latitude: ${f.lat}; longitude: ${f.lng}`} data-capsule-id={f.id} class="capsule-frame" rotation={yaw(f.heading)}>
           <a-plane
             width={FRAME_SIZE + 0.2}
             height={FRAME_SIZE + 0.2}
@@ -156,12 +162,14 @@ export default function ArScene({ frames, onTap, placeAt = null, onPlaceMove }: 
         </a-entity>
       ))}
       {placeAt && (
-        <a-entity ref={previewRef} gps-new-entity-place={`latitude: ${placeAt.lat}; longitude: ${placeAt.lng}`}>
+        <a-entity ref={previewRef} gps-new-entity-place={`latitude: ${placeAt.lat}; longitude: ${placeAt.lng}`} rotation={yaw(placeHeading)}>
           <a-plane
-            width={FRAME_SIZE}
-            height={FRAME_SIZE}
+            width={FRAME_SIZE + 0.2}
+            height={FRAME_SIZE + 0.2}
+            position="0 0 -0.01"
             material={`color: ${frameIn}; opacity: 0.55; transparent: true; shader: flat; side: double`}
           />
+          {placeImage && <a-image src={placeImage} width={FRAME_SIZE} height={FRAME_SIZE} />}
           <a-text value="NEW" align="center" color={textColor} width="6" position={`0 ${-FRAME_SIZE / 2 - 0.4} 0`} />
         </a-entity>
       )}

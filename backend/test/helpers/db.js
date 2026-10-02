@@ -40,13 +40,13 @@ export async function insertSession(pool, userId, { expiresAt } = {}) {
 
 export async function insertCapsule(
   pool,
-  { userId, mediaId = randomUUID(), title = '테스트 캡슐', lat = 37.5665, lng = 126.978, status = 'ACTIVE', expiresAt } = {},
+  { userId, mediaId = randomUUID(), title = '테스트 캡슐', lat = 37.5665, lng = 126.978, heading = 0, status = 'ACTIVE', expiresAt } = {},
 ) {
   const { rows } = await pool.query(
     `INSERT INTO capsules (user_id, media_id, title, lat, lng, accuracy, heading, status, expires_at)
-     VALUES ($1, $2, $3, $4, $5, 5, 0, $6, COALESCE($7::timestamptz, now() + $8 * interval '1 hour'))
+     VALUES ($1, $2, $3, $4, $5, 5, $9, $6, COALESCE($7::timestamptz, now() + $8 * interval '1 hour'))
      RETURNING id, user_id, media_id, lat, lng, status, expires_at`,
-    [userId, mediaId, title, lat, lng, status, expiresAt ?? null, PRM_06_BRONZE_TTL_HOURS],
+    [userId, mediaId, title, lat, lng, status, expiresAt ?? null, PRM_06_BRONZE_TTL_HOURS, heading],
   );
   return rows[0];
 }

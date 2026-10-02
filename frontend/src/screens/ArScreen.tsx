@@ -8,7 +8,7 @@ import { FabMenu, type Anchor } from '../components/FabMenu';
 import { Notice, type NoticeState } from '../components/Notice';
 import { OpenView } from '../components/OpenView';
 import { PlaceBar } from '../components/PlaceBar';
-import { clampOffset, distanceM, frameState, isLowAccuracy, latLngToOffset, offsetToLatLng, toHeading, type LatLng, type OrientationLike } from '../lib/geo';
+import { bearingDeg, clampOffset, distanceM, frameState, isLowAccuracy, latLngToOffset, offsetToLatLng, toHeading, type LatLng, type OrientationLike } from '../lib/geo';
 import { log } from '../lib/log';
 import { PRM_20_DROP_PLACE_RADIUS_M } from '../params';
 import { useArStore, type GeoPosition } from '../stores/ar';
@@ -20,9 +20,12 @@ const ArScene = lazy(() => import('../ar/ArScene'));
 export function ArScreen() {
   const position = useArStore((s) => s.position);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [drop, setDrop] = useState<Anchor | null>(null);
-  // W-13 드롭 위치 정하기 중이면 프레임 좌표 (처음엔 내 위치 3m 북쪽, ArScene이 보는 방향 앞으로 다시 알린다)
-  const [placeAt, setPlaceAt] = useState<LatLng | null>(null);
+  // 드롭 시트가 열려 있으면 true. 위치·방향을 정하면 anchor가 생긴다 (W-07 → W-13 → W-08)
+  const [dropOpen, setDropOpen] = useState(false);
+  const [anchor, setAnchor] = useState<Anchor | null>(null);
+  // W-13 위치·방향 정하기 중인 프레임. touched: 슬라이더를 움직였는지 (전에는 늘 나를 바라보게 맞춘다)
+  const [place, setPlace] = useState<{ at: LatLng; heading: number; touched: boolean; file: File } | null>(null);
+  const [placeImage, setPlaceImage] = useState<string | null>(null);
   const [opened, setOpened] = useState<{ capsule: NearbyCapsule; position: GeoPosition } | null>(null);
   const [notice, setNotice] = useState<NoticeState | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
@@ -53,11 +56,19 @@ export function ArScreen() {
     };
   }, []);
 
+  const placeFile = place?.file ?? null;
+  useEffect(() => {
+    if (!placeFile) return setPlaceImage(null);
+    const url = URL.createObjectURL(placeFile);
+    setPlaceImage(url);
+    return () => URL.revokeObjectURL(url);
+  }, [placeFile]);
+
   const { capsules } = nearby;
   const frames = useMemo(
     () =>
       position
-        ? capsules.map((c) => ({ id: c.id, title: c.title, lat: c.lat, lng: c.lng, thumbUrl: c.thumb_url, ...frameState(c, position) }))
+        ? capsules.map((c) => ({ id: c.id, title: c.title, lat: c.lat, lng: c.lng, heading: c.heading, thumbUrl: c.thumb_url, ...frameState(c, position) }))
         : [],
     [capsules, position],
   );
@@ -73,23 +84,39 @@ export function ArScreen() {
     setOpened({ capsule, position });
   };
 
-  const startPlacing = (start: Anchor) => setPlaceAt(offsetToLatLng(start, 0, 3));
+  // 0 이상 360 미만 정수 (게시 검증 범위)
+  const facing = (from: LatLng, to: LatLng) => Math.round(bearingDeg(from, to)) % 360;
+
+  const closeDrop = () => {
+    setDropOpen(false);
+    setAnchor(null);
+    setPlace(null);
+  };
+
+  // W-07 "다음": 내 위치 3m 북쪽에서 시작한다 (ArScene이 보는 방향 앞으로 다시 알린다)
+  const startPlacing = (file: File) => {
+    const here = useArStore.getState().position;
+    if (!here) return;
+    const at = offsetToLatLng(here, 0, 3);
+    setPlace({ at, heading: facing(at, here), touched: false, file });
+  };
 
   // ArScene이 알린 바닥 지점을 내 위치에서 배치 반경(PRM-20) 안으로 줄여 프레임 좌표로 쓴다
   const onPlaceMove = (target: LatLng) => {
     if (!position) return;
     const o = latLngToOffset(position, target);
     const c = clampOffset(o.eastM, o.northM, PRM_20_DROP_PLACE_RADIUS_M);
-    setPlaceAt(offsetToLatLng(position, c.eastM, c.northM));
+    const at = offsetToLatLng(position, c.eastM, c.northM);
+    setPlace((p) => p && { ...p, at, heading: p.touched ? p.heading : facing(at, position) });
   };
 
-  // 앵커 자리는 프레임 좌표, 정확도·방향·user 좌표는 놓는 순간의 내 위치
+  // 앵커 자리·방향은 프레임, 정확도·user 좌표는 놓는 순간의 내 위치
   const confirmPlace = () => {
-    const { position: now, heading } = useArStore.getState();
-    if (!placeAt) return;
+    const now = useArStore.getState().position;
+    if (!place) return;
     if (!now || isLowAccuracy(now.accuracy)) return setNotice({ kind: 'drop_remeasure' });
-    setPlaceAt(null);
-    setDrop({ lat: placeAt.lat, lng: placeAt.lng, accuracy: now.accuracy, heading: heading ?? 0, user_lat: now.lat, user_lng: now.lng });
+    setAnchor({ lat: place.at.lat, lng: place.at.lng, accuracy: now.accuracy, heading: place.heading, user_lat: now.lat, user_lng: now.lng });
+    setPlace(null);
   };
 
   let status: string | null = null;
@@ -101,23 +128,36 @@ export function ArScreen() {
   return (
     <div className={styles.screen}>
       <Suspense fallback={null}>
-        <ArScene frames={frames} onTap={onTap} placeAt={placeAt} onPlaceMove={onPlaceMove} />
+        <ArScene
+          frames={frames}
+          onTap={onTap}
+          placeAt={place?.at ?? null}
+          placeHeading={place?.heading ?? 0}
+          placeImage={placeImage}
+          onPlaceMove={onPlaceMove}
+        />
       </Suspense>
       <AccuracyBanner visible={position != null && isLowAccuracy(position.accuracy)} />
-      {status && !placeAt && <p className={styles.status}>{status}</p>}
-      {placeAt && (
-        <PlaceBar distanceM={position ? distanceM(position, placeAt) : 0} onCancel={() => setPlaceAt(null)} onConfirm={confirmPlace} />
+      {status && !place && <p className={styles.status}>{status}</p>}
+      {place && (
+        <PlaceBar
+          distanceM={position ? distanceM(position, place.at) : 0}
+          heading={place.heading}
+          onHeading={(heading) => setPlace((p) => p && { ...p, heading, touched: true })}
+          onCancel={closeDrop}
+          onConfirm={confirmPlace}
+        />
       )}
-      {!opened && !placeAt && <Fab open={menuOpen} onClick={() => !drop && !opened && setMenuOpen((v) => !v)} />}
-      {menuOpen && !drop && !opened && (
+      {!opened && !place && <Fab open={menuOpen} onClick={() => !dropOpen && !opened && setMenuOpen((v) => !v)} />}
+      {menuOpen && !dropOpen && !opened && (
         <FabMenu
           onClose={() => setMenuOpen(false)}
-          onDrop={startPlacing}
+          onDrop={() => setDropOpen(true)}
           onNotice={setNotice}
         />
       )}
       {notice && <Notice notice={notice} onClose={() => setNotice(null)} />}
-      {drop && <DropSheet anchor={drop} onClose={() => setDrop(null)} />}
+      {dropOpen && <DropSheet anchor={anchor} hidden={place != null} onPlace={startPlacing} onClose={closeDrop} />}
       {opened && <OpenView {...opened} onClose={() => setOpened(null)} onNotice={setNotice} />}
     </div>
   );

@@ -72,8 +72,8 @@ export async function findNearby({ pool }, { userId, lat, lng }) {
     earthRadiusM: EARTH_RADIUS_M,
     userId,
   });
-  return rows.map(({ id, title, lat, lng, media_id, is_mine }) => ({
-    id, title, lat, lng, thumb_url: `/api/media/${media_id}/thumb`, is_mine,
+  return rows.map(({ id, title, lat, lng, heading, media_id, is_mine }) => ({
+    id, title, lat, lng, heading, thumb_url: `/api/media/${media_id}/thumb`, is_mine,
   }));
 }
 

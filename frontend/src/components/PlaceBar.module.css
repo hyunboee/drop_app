@@ -30,12 +30,39 @@
   color: var(--color-error);
 }
 
-.actions {
+.bottom {
   position: absolute;
   left: var(--space-gutter);
   right: var(--space-gutter);
   bottom: calc(var(--space-6) + var(--safe-bottom));
   z-index: 3;
+}
+
+.rotate {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  font: var(--type-label);
+  letter-spacing: var(--type-label-ls);
+  color: var(--color-text-sub);
+  text-shadow: var(--shadow-text);
+}
+
+.rotate input {
+  flex: 1;
+  accent-color: var(--color-gold-500);
+}
+
+.degree {
+  min-width: 4ch;
+  text-align: right;
+  font: var(--type-distance);
+  letter-spacing: var(--type-distance-ls);
+  color: var(--color-gold-300);
+}
+
+.actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3);

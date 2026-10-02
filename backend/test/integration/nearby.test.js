@@ -86,22 +86,23 @@ test('BE-08 FR-11 본인 캡슐은 is_mine true, 타인 캡슐은 false', async 
   assert.deepEqual(byId, { [mine.id]: true, [theirs.id]: false });
 });
 
-test('BE-08 NFR-06 응답 필드와 thumb_url 형식(/api/media/{media_id}/thumb), 원본 경로·user_id 없음', async (t) => {
+test('BE-08 NFR-06 응답 필드(BE-13 heading 포함)와 thumb_url 형식(/api/media/{media_id}/thumb), 원본 경로·user_id 없음', async (t) => {
   const { url } = await start(t);
   const user = await loggedIn();
   const other = await insertUser(pool);
-  const cap = await insertCapsule(pool, { userId: other.id, title: '주변 캡슐' });
+  const cap = await insertCapsule(pool, { userId: other.id, title: '주변 캡슐', heading: 135.5 });
   const res = await nearby(url, user.cookie);
   assert.equal(res.status, 200);
   assert.deepEqual(Object.keys(res.body), ['capsules']);
   assert.equal(res.body.capsules.length, 1);
   const c = res.body.capsules[0];
-  assert.deepEqual(Object.keys(c).sort(), ['id', 'is_mine', 'lat', 'lng', 'thumb_url', 'title']);
+  assert.deepEqual(Object.keys(c).sort(), ['heading', 'id', 'is_mine', 'lat', 'lng', 'thumb_url', 'title']);
   assert.deepEqual(c, {
     id: cap.id,
     title: '주변 캡슐',
     lat: cap.lat,
     lng: cap.lng,
+    heading: 135.5,
     thumb_url: `/api/media/${cap.media_id}/thumb`,
     is_mine: false,
   });

@@ -41,6 +41,12 @@ export function latLngToOffset(origin: LatLng, p: LatLng): { eastM: number; nort
   };
 }
 
+// from에서 to를 바라보는 방위 (북 0°, 시계 방향, 0 이상 360 미만)
+export function bearingDeg(from: LatLng, to: LatLng): number {
+  const { eastM, northM } = latLngToOffset(from, to);
+  return ((Math.atan2(eastM, northM) * 180) / Math.PI + 360) % 360;
+}
+
 export function isLowAccuracy(accuracy: number): boolean {
   return accuracy > PRM_03_REMEASURE_ACCURACY_M;
 }

@@ -18,7 +18,7 @@ export async function insertCapsule(db, { userId, mediaId, title, grade, lat, ln
 
 export async function findNearbyCapsules(db, { box, center, radiusM, earthRadiusM, userId }) {
   const { rows } = await db.query(
-    `SELECT id, title, lat, lng, media_id, user_id = $9 AS is_mine
+    `SELECT id, title, lat, lng, heading, media_id, user_id = $9 AS is_mine
      FROM capsules
      WHERE lat BETWEEN $1 AND $2 AND lng BETWEEN $3 AND $4
        AND status = 'ACTIVE' AND expires_at > now()
