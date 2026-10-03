@@ -1,6 +1,6 @@
 # Drop ERD
 
-> 출처: `1-domain-definition.md`(도메인 정의서 v0.9), `2-PRD.md`(PRD v0.9), `3-user-scenario.md`(시나리오 v0.4), `4-wireframes.md`(와이어프레임 v0.5), `5-project-principle.md`(프로젝트 원칙 v0.5), `6-arch-diagram.md`(아키텍처 v0.4). 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
+> 출처: `1-domain-definition.md`(도메인 정의서 v1.1), `2-PRD.md`(PRD v1.2), `3-user-scenario.md`(시나리오 v0.6), `4-wireframes.md`(와이어프레임 v0.7), `5-project-principle.md`(프로젝트 원칙 v0.7), `6-arch-diagram.md`(아키텍처 v0.6). 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
 
 ## 변경 이력
 

@@ -1,6 +1,6 @@
 # Drop 프로젝트 구조 설계 원칙
 
-> 출처: `1-domain-definition.md`(도메인 정의서 v0.9), `2-PRD.md`(PRD v1.0), `3-user-scenario.md`(시나리오 v0.4), `4-wireframes.md`(와이어프레임 v0.5), `8-plan.md`(실행 계획 v0.2), `.claude/skills/develop-backend`·`develop-frontend` SKILL. 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다. 스택 밖 최소 도구는 PRD 6장 "빌드·테스트 도구" 행으로 승인된 것만 쓴다. 결정 근거는 7장에 있다.
+> 출처: `1-domain-definition.md`(도메인 정의서 v1.1), `2-PRD.md`(PRD v1.2), `3-user-scenario.md`(시나리오 v0.6), `4-wireframes.md`(와이어프레임 v0.7), `8-plan.md`(실행 계획 v0.7), `.claude/skills/develop-backend`·`develop-frontend` SKILL. 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다. 스택 밖 최소 도구는 PRD 6장 "빌드·테스트 도구" 행으로 승인된 것만 쓴다. 결정 근거는 7장에 있다.
 
 ## 0. 변경 이력
 
@@ -181,7 +181,7 @@ MVP 엔드포인트 (이 외에는 만들지 않는다)
 
 | 구분 | 방식 | 대상 |
 |---|---|---|
-| 러너 | Node 22 LTS 이상의 내장 `node:test` + `node:assert`, 대체는 `node:test`의 `mock`, 커버리지는 내장 커버리지(`--experimental-test-coverage`, 임계값 옵션) | — |
+| 러너 | Node 24.2 이상의 내장 `node:test` + `node:assert`, 대체는 `node:test`의 `mock`, 커버리지는 내장 커버리지(`--experimental-test-coverage`, 임계값 옵션) | — |
 | 단위 | `lib/`, `services/`의 순수 로직 | 거리 계산·위경도 범위 박스(FR-08, NFR-04), 열람 판정식 `d − min(accuracy, PRM-03 보정 상한) ≤ PRM-01`과 재측정 기준(FR-10, PRM-03), 만료 계산(FR-07, PRM-06), `crypto.scrypt` 해시·검증과 세션 토큰(FR-01, Q-05), 연속 실패 잠금(M-05), IP HMAC 해시(FR-10), 입력 검증(M-06, M-10, M-11, 등급) |
 | 통합 | `app`을 임의 포트로 띄우고 내장 `fetch`로 HTTP 호출 + 실제 테스트 DB | 401/409/429, 세션 쿠키 속성(FR-01), 업로드 URL 발급(FR-04), 게시 성공·원본 또는 썸네일 검열 거부(422)·503(FR-06), 주변 조회에서 만료·삭제·미검열 제외(FR-08, BR-11, BR-33), 정확도 부족 422·반경 밖 403·404·열람 기록 저장(FR-10, NFR-08), 미디어 프록시: 비로그인 401·열람 기록 없는 원본 403·소유자 200·만료·삭제 404·`Cache-Control: private, max-age=31536000, immutable` 헤더(NFR-05, NFR-08), 소유자만 삭제·S3 객체 삭제 호출(FR-11) |
 | DB | PostgreSQL 17 테스트 전용 DB에 마이그레이션을 적용하고, 테스트 파일마다 `TRUNCATE`로 비운다. repository SQL은 대체하지 않고 실제 DB로 검증한다 | NFR-04, NFR-07 |
@@ -327,7 +327,7 @@ v0.1의 확인 필요 21건을 아래와 같이 결정했다.
 |---|---|---|---|
 | 1 | 프론트 빌드 | Vite (React 앱에 필요한 최소 빌드 도구) | PRD 6장, 2.3, 6.3 |
 | 2 | 프론트 테스트 | Vitest + React Testing Library + jsdom | PRD 6장, 4.3 |
-| 3 | 백엔드 테스트 | `node:test` + `node:assert` + 내장 커버리지, Node 22 LTS 이상 | PRD 6장, 4.2 |
+| 3 | 백엔드 테스트 | `node:test` + `node:assert` + 내장 커버리지, Node 24.2 이상 | PRD 6장, 4.2 |
 | 4 | Express 버전 | Express 5 | PRD 6장, 2.3 |
 | 5 | 마이그레이션 | 번호 `.sql` + `scripts/migrate.js` + 적용 이력 테이블 | 3.2, 5.3, 6.2 |
 | 6 | A-Frame·AR.js | npm 패키지로 설치(버전 고정), CDN 미사용 | PRD 6장, 2.3 |

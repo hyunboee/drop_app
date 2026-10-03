@@ -1,6 +1,6 @@
 # Drop PRD (제품 요구사항 정의서)
 
-> AR 타임캡슐 & 체크포인트 앱. 도메인 규칙의 원본은 `docs/1-domain-definition.md`(이하 "도메인 정의서")이며, 이 문서는 v0.9 기준으로 BR·PRM·INV·ST 등 ID로 참조만 하며, 수치는 도메인 정의서 5.3 운영 파라미터(PRM)를 따른다.
+> AR 타임캡슐 & 체크포인트 앱. 도메인 규칙의 원본은 `docs/1-domain-definition.md`(이하 "도메인 정의서")이며, 이 문서는 v1.1 기준으로 BR·PRM·INV·ST 등 ID로 참조만 하며, 수치는 도메인 정의서 5.3 운영 파라미터(PRM)를 따른다.
 
 ## 변경 이력
 
@@ -155,7 +155,7 @@
 | DB | PostgreSQL 17 (유저, 캡슐 메타데이터·좌표, 열람 기록, 후속 크리스탈 원장) |
 | 미디어 | AWS S3 (원본, 썸네일), Cloudflare CDN 연동 고려. MVP 3D 프레임은 프론트 정적 파일(`frontend/public/`) |
 | 검열 | AWS Rekognition |
-| 빌드·테스트 도구 | Vite(프론트 빌드), Vitest + `@vitest/coverage-v8` + React Testing Library + jsdom(프론트 테스트), `@types/react`·`@types/react-dom`(TS 타입), `node:test` + 내장 커버리지(백엔드 테스트, Node 22 LTS 이상), Express 5, A-Frame·AR.js npm 패키지(CDN 미사용). 스택 밖 최소 도구로 승인됨 (5-project-principle.md 7장) |
+| 빌드·테스트 도구 | Vite(프론트 빌드), Vitest + `@vitest/coverage-v8` + React Testing Library + jsdom(프론트 테스트), `@types/react`·`@types/react-dom`(TS 타입), `node:test` + 내장 커버리지(백엔드 테스트, Node 24.2 이상), Express 5, A-Frame·AR.js npm 패키지(CDN 미사용). 스택 밖 최소 도구로 승인됨 (5-project-principle.md 7장) |
 | 배포 | AWS EC2 단일 인스턴스에서 Express가 API와 프론트 빌드 결과(`dist`)를 같은 출처로 서빙. HTTPS는 Cloudflare 프록시 + Origin Certificate(Full strict). 로컬 개발은 데스크톱 `localhost`(보안 컨텍스트), 실기기 테스트는 배포 환경에서 한다. PostgreSQL은 AWS RDS for PostgreSQL 17 단일 인스턴스(관리형 자동 백업, EC2와 같은 VPC의 비공개 서브넷, 외부 접근 없음)로 둔다(1인 운영에서 백업·패치를 직접 하지 않음) |
 
 > AWS 연동에는 공식 AWS SDK for JavaScript를 쓴다(S3·Rekognition 사용에 필요). 그 외 인증·지도·이미지 처리 라이브러리는 쓰지 않는다 (Q-05, Q-06).

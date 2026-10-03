@@ -1,6 +1,6 @@
 # Drop 스타일 가이드
 
-> 출처: `4-wireframes.md`(와이어프레임 v0.5), `2-PRD.md`(PRD v1.0, 7장 UX 원칙), 확정 시안 `docs/design/W-01-login-soil.svg`(흙 속 타임캡슐). 실행 계획 FE-00 산출물이며, 프론트 UI Task(FE-02, FE-03, FE-06, FE-08~FE-12)는 이 문서를 따른다.
+> 출처: `4-wireframes.md`(와이어프레임 v0.7), `2-PRD.md`(PRD v1.2, 7장 UX 원칙), 확정 시안 `docs/design/W-01-login-soil.svg`(흙 속 타임캡슐). 실행 계획 FE-00 산출물이며, 프론트 UI Task(FE-02, FE-03, FE-06, FE-08~FE-12)는 이 문서를 따른다.
 > 토큰 이름은 그대로 CSS 변수 이름이다. 수치(조회 반경 등 동작 값)는 PRM-xx / M-xx를 따르며 이 문서에서 정하지 않는다.
 
 ## 변경 이력

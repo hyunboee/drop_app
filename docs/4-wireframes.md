@@ -1,6 +1,6 @@
 # Drop 와이어프레임
 
-> 출처: `1-domain-definition.md`(도메인 정의서 v0.9), `2-PRD.md`(PRD v0.9, 3장 범위·4장 FR·4.1 M 파라미터·7장 UX 원칙), `3-user-scenario.md`(시나리오 v0.4). 모바일 세로 화면 기준이며 MVP(PRD 3.1, FR P0·P1) 화면만 그린다. 수치는 PRM-xx / M-xx ID로만 참조하고, 색상·폰트 등 시각 디자인은 정하지 않는다.
+> 출처: `1-domain-definition.md`(도메인 정의서 v1.1), `2-PRD.md`(PRD v1.2, 3장 범위·4장 FR·4.1 M 파라미터·7장 UX 원칙), `3-user-scenario.md`(시나리오 v0.6). 모바일 세로 화면 기준이며 MVP(PRD 3.1, FR P0·P1) 화면만 그린다. 수치는 PRM-xx / M-xx ID로만 참조하고, 색상·폰트 등 시각 디자인은 정하지 않는다.
 
 ## 1. 변경 이력
 

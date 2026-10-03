@@ -1,6 +1,6 @@
 # Drop MVP 실행 계획
 
-> 출처: `1-domain-definition.md`(도메인 정의서 v0.9), `2-PRD.md`(PRD v1.0), `3-user-scenario.md`(시나리오 v0.4), `4-wireframes.md`(와이어프레임 v0.5), `5-project-principle.md`(프로젝트 원칙 v0.6), `6-arch-diagram.md`(아키텍처 v0.4), `7-erd.md`(ERD v0.3), `schema.sql`, `.claude/skills/develop-backend`·`develop-frontend` SKILL. 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
+> 출처: `1-domain-definition.md`(도메인 정의서 v1.1), `2-PRD.md`(PRD v1.2), `3-user-scenario.md`(시나리오 v0.6), `4-wireframes.md`(와이어프레임 v0.7), `5-project-principle.md`(프로젝트 원칙 v0.7), `6-arch-diagram.md`(아키텍처 v0.6), `7-erd.md`(ERD v0.4), `schema.sql`, `.claude/skills/develop-backend`·`develop-frontend` SKILL. 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
 
 ## 1. 변경 이력
 
@@ -762,7 +762,7 @@ flowchart LR
 
 - **목표:** 원칙 6장 구조대로 `backend/`, `frontend/` 패키지를 만들고 승인된 의존성만 설치한다.
 - **수행 작업**
-  - `backend/package.json`: `"type": "module"` 여부 결정 후 고정, Node 22 LTS 이상(`engines`), 런타임 `express`(5), `pg`. (AWS SDK는 BE-04에서 추가)
+  - `backend/package.json`: `"type": "module"` 여부 결정 후 고정, Node 24.2 이상(`engines`), 런타임 `express`(5), `pg`. (AWS SDK는 BE-04에서 추가)
   - `frontend/package.json`: `react`(19), `react-dom`, `zustand`, `@tanstack/react-query`, 개발 `vite`, `vitest`, `@vitest/coverage-v8`, `@testing-library/react`, `jsdom`, `typescript`, `@types/react`, `@types/react-dom`(8장 #2 승인). `"test"`, `"build"` 스크립트.
   - `backend/.env.example`(원칙 5.1 변수 이름만), 저장소 `.gitignore`(`.env`, `.env.test`, `node_modules`, `dist`, `coverage`).
   - lock 파일 커밋.
@@ -781,7 +781,7 @@ flowchart LR
   - RDS for PostgreSQL 17 단일 인스턴스(자동 백업, EC2와 같은 VPC 비공개 서브넷, EC2 보안 그룹에서만 접근).
   - S3 비공개 버킷(퍼블릭 액세스 차단), 수명 주기 규칙: 태그 `status=pending` 객체를 M-08 뒤 삭제. 브라우저 직접 PUT용 CORS: AllowedOrigins = 서비스 도메인 하나, AllowedMethods = `PUT`만, AllowedHeaders = Presigned URL에 서명된 헤더만(`Content-Type`, `If-None-Match`, `x-amz-tagging`)(8장 #9, 원칙 5.2).
   - EC2 인스턴스 역할: 버킷 `media/*`에 PutObject·GetObject·DeleteObject·DeleteObjectTagging·PutObjectTagging(Presigned 태그용), Rekognition `DetectModerationLabels`. 장기 액세스 키 없음.
-  - EC2: Node 22 LTS, 환경 변수 설정, `npm run migrate`, 백엔드 실행과 재시작 시 자동 기동(systemd).
+  - EC2: Node 24 LTS(24.2 이상), 환경 변수 설정, `npm run migrate`, 백엔드 실행과 재시작 시 자동 기동(systemd).
   - Cloudflare: 프록시 활성, Origin Certificate를 EC2에 설치, SSL 모드 Full (strict). EC2 인바운드는 Cloudflare 경유만 허용.
 - **완료 조건**
   - [ ] `https://<서비스 도메인>/api/health`가 200을 반환한다

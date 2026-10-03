@@ -1,5 +1,5 @@
 -- Drop MVP 스키마 (PostgreSQL 17)
--- 출처: docs/7-erd.md v0.3 (1장 MVP 물리 ERD, 1.5 운영용 테이블)
+-- 출처: docs/7-erd.md v0.4 (1장 MVP 물리 ERD, 1.5 운영용 테이블)
 -- 조정 가능한 값(M-11 제목 상한, PRM-03 재측정 기준, PRM-06 유지 기간)은 CHECK에 넣지 않고 앱에서 검증한다 (원칙 P-05).
 -- backend/db/migrations/001_init.sql은 이 파일을 그대로 복사한다. 트랜잭션은 migrate.js가 감싼다.
 -- 단독 실행: postgresql MCP pg_execute_sql로 빈 DB에 이 파일 내용을 실행한다 (docs/8-plan.md 2.5)
@@ -37,7 +37,7 @@ CREATE TABLE capsules (
   lat          double precision NOT NULL CHECK (lat BETWEEN -90 AND 90),
   lng          double precision NOT NULL CHECK (lng BETWEEN -180 AND 180),
   accuracy     double precision NOT NULL CHECK (accuracy >= 0),               -- 드롭 시 GPS 정확도(m)
-  heading      double precision NOT NULL CHECK (heading >= 0 AND heading < 360), -- 드롭 시 기기 방향(도)
+  heading      double precision NOT NULL CHECK (heading >= 0 AND heading < 360), -- 프레임 앞면이 바라보는 방위(도)
   status       text             NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'DELETED')),
   published_at timestamptz      NOT NULL DEFAULT now(),
   expires_at   timestamptz      NOT NULL  -- published_at + PRM-06
