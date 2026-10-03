@@ -24,7 +24,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -256,9 +258,11 @@ private fun Spike(startAnchorId: String?) {
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .background(UiColor(0xAA000000))
-                .padding(12.dp),
+                // 상태 표시줄·카메라 구멍과 겹치지 않게 안쪽으로 넣는다
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
-            Text(status, color = UiColor.White, fontSize = 14.sp)
+            Text(status, color = UiColor.White, fontSize = 16.sp)
             Text("스캔 품질: $quality", color = UiColor.White, fontSize = 12.sp)
             if (hostedId.isNotBlank()) {
                 SelectionContainer { Text("ID: $hostedId", color = UiColor(0xFFE9D39A), fontSize = 12.sp) }
@@ -269,7 +273,9 @@ private fun Spike(startAnchorId: String?) {
             Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(12.dp),
+                // 하단 내비게이션 막대와 겹치지 않게 안쪽으로 넣는다
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

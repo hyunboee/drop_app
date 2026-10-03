@@ -60,6 +60,7 @@ app/                              Android 앱 (Kotlin, Gradle)
 - 의존 방향: `ui → ar, api, auth → lib`. `lib`는 다른 패키지를 참조하지 않는다(원칙 2.1과 같은 생각).
 - 화면은 Jetpack Compose로 만든다. AR 화면은 SceneView의 `ARSceneView` 위에 Compose 화면 요소를 겹친다. 서체는 기기 기본 한국어 서체를 쓴다(`9-style-guide.md`의 `--font-sans`와 같은 생각, 서체 파일을 넣지 않는다).
 - 색상·간격·서체 크기는 `9-style-guide.md` 토큰 값을 `ui/Tokens.kt` 한 곳에 옮겨 쓴다.
+- 화면 요소는 시스템 상태 표시줄·내비게이션 막대·카메라 구멍과 겹치지 않게 안전 영역 안쪽에 둔다(`statusBarsPadding`, `navigationBarsPadding`). 타깃 API 36은 화면을 가장자리까지 채우는 것이 기본이라 따로 넣지 않으면 겹친다(실증 앱에서 상태 글자가 가려져 보이지 않았다).
 - 판정식과 거리 계산은 백엔드 `lib/geo.js`·웹 `lib/geo.ts`와 같은 공식이며, `8-plan.md` BE-07의 공통 테스트 표(G-01~04, J-01~07, A-01~02)를 그대로 쓴다(APP-04).
 - 그리기는 SceneView로만 하고, 클라우드 앵커·Geospatial은 `ar/`에서 ARCore `Session` 원본 API를 직접 호출한다. SceneView가 맞지 않아 그리기를 바꾸더라도 `ar/`의 앵커 코드와 `lib/`, `api/`, `auth/`가 그대로 남게 하려는 것이다(네이티브 PRD RISK-N03).
 - 패키지 이름은 `com.hyunboee.drop`이다. 스토어에 올린 뒤에는 바꿀 수 없다.
