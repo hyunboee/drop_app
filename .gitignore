@@ -144,3 +144,14 @@ vite.config.ts.timestamp-*
 
 # 로컬 개발용 미디어 저장소 (DEV_LOCAL_MEDIA=1)
 backend/.dev-media/
+
+# Android 앱 (app/)
+app/.gradle/
+app/.kotlin/
+app/build/
+app/app/build/
+app/local.properties
+*.apk
+*.aab
+*.jks
+*.keystore

@@ -1,6 +1,6 @@
 # Drop ERD
 
-> 출처: `1-domain-definition.md`(도메인 정의서 v1.1), `2-PRD.md`(PRD v1.2), `3-user-scenario.md`(시나리오 v0.6), `4-wireframes.md`(와이어프레임 v0.7), `5-project-principle.md`(프로젝트 원칙 v0.7), `6-arch-diagram.md`(아키텍처 v0.6). 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
+> 출처: `1-domain-definition.md`(도메인 정의서 v1.1), `2-PRD.md`(PRD v1.2), `3-user-scenario.md`(시나리오 v0.6), `4-wireframes.md`(와이어프레임 v0.7), `5-project-principle.md`(프로젝트 원칙 v0.7), `6-arch-diagram.md`(아키텍처 v0.6), `10-native-PRD.md`(네이티브 PRD v0.6, 1.6만). 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
 
 ## 변경 이력
 
@@ -10,6 +10,7 @@
 | 0.2 | 2026-10-01 | Claude Code | 확인 필요 8건 결정 반영: 잠금 컬럼 삭제(메모리 카운터), 증명 ID 컬럼 삭제, `users.terms_version` 추가, 운영용 테이블 `schema_migrations`, 로그인 성공 시 만료 세션 삭제, 3장을 결정 내역으로 변경 |
 | 0.3 | 2026-10-01 | Claude Code | 문서 정합성 점검: 출처 문서 버전을 최신(도메인 v0.8, PRD v0.8, 시나리오 v0.4, 와이어프레임 v0.4, 원칙 v0.4, 아키텍처 v0.3)으로 갱신 |
 | 0.4 | 2026-10-02 | Claude Code | 프레임 방향 회전(PRD v1.2 Q-14): `capsules.heading`의 의미를 드롭 시 기기 방향에서 프레임 앞면이 바라보는 방위로 변경. 타입·제약·DDL은 그대로 |
+| 0.5 | 2026-10-03 | Claude Code | 네이티브 N1(네이티브 PRD v0.3): 1.6 추가. `capsules.cloud_anchor_id`·`geo_pose`, `view_records.plane_match`와 마이그레이션 `002` DDL, 결정 E9~E11. `schema.sql`은 `001`의 원본이라 바꾸지 않는다 |
 
 ---
 
@@ -156,6 +157,31 @@ erDiagram
 |---|---|---|
 | schema_migrations | filename text PK, applied_at timestamptz NOT NULL DEFAULT `now()` | `scripts/migrate.js`의 적용 이력(원칙 5.3) |
 
+### 1.6 네이티브 N1 변경 (마이그레이션 002)
+
+네이티브 PRD FR-N06~N08에 필요한 컬럼만 더한다. 테이블은 늘리지 않는다. 1장 다이어그램과 `schema.sql`은 웹 MVP 기준(`001_init.sql`의 원본)이라 그대로 두고, 이 절이 `backend/db/migrations/002_native_anchor.sql`의 원본이다.
+
+| 테이블 | 컬럼 | 타입 | 제약 | 근거 ID |
+|---|---|---|---|---|
+| capsules | cloud_anchor_id | text | NULL 허용 | FR-N05, FR-N06. ARCore 클라우드 앵커 ID. 웹에서 드롭한 캡슐과 앵커 저장 전 게시분은 NULL |
+| capsules | geo_pose | jsonb | NULL 허용 | FR-N05, FR-N06. Geospatial 포즈 `{ lat, lng, alt, qx, qy, qz, qw }`. VPS를 쓸 수 없던 장소는 NULL |
+| view_records | plane_match | boolean | NOT NULL, DEFAULT `false` | FR-N08, 도메인 5.4(planeScanMatch). 클라우드 앵커나 Geospatial로 고정된 프레임을 탭했는지 |
+
+```sql
+-- 002_native_anchor.sql (네이티브 N1)
+ALTER TABLE capsules
+  ADD COLUMN cloud_anchor_id text,   -- ARCore 클라우드 앵커 ID (웹 캡슐은 NULL)
+  ADD COLUMN geo_pose        jsonb;  -- Geospatial 포즈 { lat, lng, alt, qx, qy, qz, qw } (없으면 NULL)
+
+ALTER TABLE view_records
+  ADD COLUMN plane_match boolean NOT NULL DEFAULT false;  -- 앵커로 고정된 프레임을 탭했는지
+```
+
+- 두 앵커 컬럼은 서버가 내용을 검증하지 않고 저장만 한다(네이티브 PRD RISK-N06). 형식 검사는 route에서 한다: `cloud_anchor_id`는 1~128자의 영문·숫자·`-`·`_`, `geo_pose`는 일곱 값이 모두 유한한 숫자이고 `lat`·`lng`가 범위 안.
+- `geo_pose`의 값은 조회 조건으로 쓰지 않는다. 주변 조회와 거리 판정은 계속 `capsules.lat`·`lng`(프레임 GPS 좌표)로 한다. 그래서 인덱스를 더하지 않는다.
+- 클라우드 앵커 만료 시각 컬럼은 두지 않는다. N1은 브론즈만이고 앵커 보관을 PRM-06 이상으로 요청하므로 캡슐 `expires_at`보다 먼저 사라지지 않는다. 실버·마스터 도입 때(네이티브 PRD NQ-05) 추가한다(P-02).
+- 세션 테이블은 바뀌지 않는다. 앱은 같은 세션 토큰을 `Authorization` 헤더로 보낼 뿐이다(FR-N01).
+
 ---
 
 ## 2. 후속 단계 개념 ERD
@@ -289,3 +315,6 @@ v0.1의 확인 필요 8건을 아래와 같이 결정했다.
 | E6 | 이메일 대소문자 | 앱에서 소문자로 정규화해 저장, UNIQUE는 그 값에 — 확정 | 1.1 |
 | E7 | 만료 세션 정리 | 배치 없이 로그인 성공 시 `DELETE FROM sessions WHERE user_id = $1 AND expires_at < now()`. 세션 조회는 항상 `expires_at > now()` 조건 | 1.2, 원칙 5.2 |
 | E8 | 시나리오 SC-06 만료 표현 | "Expired가 된다" → "만료 시각(`expires_at`)이 지나면 조회·열람에서 제외된다(상태값 갱신 없음)" | 시나리오 SC-06 |
+| E9 | Geospatial 포즈 저장 형태 (v0.5) | 컬럼 일곱 개 대신 `jsonb` 한 컬럼. 서버가 계산·조회에 쓰지 않고 앱에 그대로 돌려주는 값이다 | 1.6 |
+| E10 | `cloud_anchor_id` NULL 허용 (v0.5) | 허용한다. 웹 캡슐과의 호환(네이티브 PRD NQ-09) 때문이며, 앵커 없이는 게시하지 않는 규칙(NQ-04)은 앱이 지킨다 | 1.6, 네이티브 PRD FR-N06 |
+| E11 | `schema.sql` (v0.5) | 바꾸지 않는다. `001_init.sql`과 바이트 단위로 같아야 하는 테스트가 있다. `002`의 원본은 1.6이다 | 1.6, `8-plan.md` DB-03 |

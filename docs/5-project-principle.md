@@ -1,6 +1,6 @@
 # Drop 프로젝트 구조 설계 원칙
 
-> 출처: `1-domain-definition.md`(도메인 정의서 v1.1), `2-PRD.md`(PRD v1.2), `3-user-scenario.md`(시나리오 v0.6), `4-wireframes.md`(와이어프레임 v0.7), `8-plan.md`(실행 계획 v0.7), `.claude/skills/develop-backend`·`develop-frontend` SKILL. 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다. 스택 밖 최소 도구는 PRD 6장 "빌드·테스트 도구" 행으로 승인된 것만 쓴다. 결정 근거는 7장에 있다.
+> 출처: `1-domain-definition.md`(도메인 정의서 v1.1), `2-PRD.md`(PRD v1.2), `3-user-scenario.md`(시나리오 v0.6), `4-wireframes.md`(와이어프레임 v0.7), `8-plan.md`(실행 계획 v0.8), `.claude/skills/develop-backend`·`develop-frontend` SKILL. 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다. 스택 밖 최소 도구는 PRD 6장 "빌드·테스트 도구" 행으로 승인된 것만 쓴다. 결정 근거는 7장에 있다.
 
 ## 0. 변경 이력
 

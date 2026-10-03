@@ -1,0 +1,25 @@
+# 의존성 버전은 이 파일 한 곳에 고정한다 (docs/12-native-plan.md 2.4)
+[versions]
+agp = "9.4.1"
+kotlin = "2.4.20"
+composeBom = "2026.09.00"
+activityCompose = "1.13.0"
+# 네이티브 PRD 6장: SceneView는 자동으로 올리지 않는다 (RISK-N03)
+arcore = "1.56.0"
+sceneview = "4.52.0"
+playServicesAuth = "22.0.0"
+junit = "4.13.2"
+
+[libraries]
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+arcore = { module = "com.google.ar:core", version.ref = "arcore" }
+sceneview-ar = { module = "io.github.sceneview:arsceneview", version.ref = "sceneview" }
+play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
+junit = { module = "junit:junit", version.ref = "junit" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

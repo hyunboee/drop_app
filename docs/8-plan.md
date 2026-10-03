@@ -1,6 +1,6 @@
 # Drop MVP 실행 계획
 
-> 출처: `1-domain-definition.md`(도메인 정의서 v1.1), `2-PRD.md`(PRD v1.2), `3-user-scenario.md`(시나리오 v0.6), `4-wireframes.md`(와이어프레임 v0.7), `5-project-principle.md`(프로젝트 원칙 v0.7), `6-arch-diagram.md`(아키텍처 v0.6), `7-erd.md`(ERD v0.4), `schema.sql`, `.claude/skills/develop-backend`·`develop-frontend` SKILL. 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
+> 출처: `1-domain-definition.md`(도메인 정의서 v1.1), `2-PRD.md`(PRD v1.2), `3-user-scenario.md`(시나리오 v0.6), `4-wireframes.md`(와이어프레임 v0.7), `5-project-principle.md`(프로젝트 원칙 v0.7), `6-arch-diagram.md`(아키텍처 v0.6), `7-erd.md`(ERD v0.5), `10-native-PRD.md`(네이티브 PRD v0.6, DB-03·BE-14~16만), `schema.sql`, `.claude/skills/develop-backend`·`develop-frontend` SKILL. 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
 
 ## 1. 변경 이력
 
@@ -13,6 +13,7 @@
 | 0.5 | 2026-10-02 | Claude Code | 프론트 구현 계획 반영: FE-03 선행에 FE-02 추가(Button·사진 배경 화면 재사용) |
 | 0.6 | 2026-10-02 | Claude Code | 드롭 위치 직접 배치(도메인 v1.0 OQ-34, PRD v1.1 Q-13) 반영: BE-12 드롭 배치 거리 검증, FE-13 드롭 위치 정하기 Task 추가, 결정 #10 |
 | 0.7 | 2026-10-02 | Claude Code | 프레임 방향 회전(PRD v1.2 Q-14) 반영: BE-13 주변 조회 응답 `heading`, FE-14 사진 먼저 → 위치·방향 정하기 Task 추가, 결정 #11 |
+| 0.8 | 2026-10-03 | Claude Code | 네이티브 N1(네이티브 PRD v0.3)의 백엔드·DB Task 추가: DB-03 마이그레이션 002, BE-14 앱용 토큰 세션, BE-15 게시·주변 조회에 앵커 정보, BE-16 열람 평면 일치 기록, 결정 #12. 앱·운영 Task는 `12-native-plan.md`에 둔다 |
 
 ---
 
@@ -73,6 +74,12 @@ flowchart LR
   BE06 --> BE12["BE-12"]
   BE07 --> BE12
   BE08 --> BE13["BE-13"]
+  DB01 --> DB03["DB-03"]
+  BE03 --> BE14["BE-14"]
+  DB03 --> BE15["BE-15"]
+  BE13 --> BE15
+  DB03 --> BE16["BE-16"]
+  BE09 --> BE16
   BE01 --> OPS02["OPS-02"]
 
   FE00["FE-00"] --> FE02
@@ -133,6 +140,7 @@ flowchart LR
 | 여유 시 | BE-11, FE-12 (FR-11, P1), OPS-04 (NFR-01·02) | — |
 | 추가 (v0.6) | BE-12, FE-13 (FR-03 드롭 위치 직접 배치) | 프레임을 끌어 내 위치 10m 안에 놓은 캡슐이 그 자리에 보임 |
 | 추가 (v0.7) | BE-13, FE-14 (FR-03 프레임 방향 회전) | 슬라이더로 돌린 방향 그대로 다른 사용자에게도 프레임이 보임 |
+| 네이티브 N1 (v0.8) | DB-03, BE-14, BE-15, BE-16 | 주차 배치는 `12-native-plan.md` 4장 |
 
 > OPS-04는 PRD 8장 주석대로 2일 안에 못 끝나면 MVP 완료 직후 첫 작업으로 한다.
 
@@ -158,6 +166,10 @@ flowchart LR
 | BE-11 | 내 캡슐 삭제 | BE | BE-08 | P1 (여유) |
 | BE-12 | 드롭 배치 거리 검증 | BE | BE-06, BE-07 | P0 |
 | BE-13 | 주변 조회 응답에 프레임 방향 | BE | BE-08 | P0 |
+| DB-03 | 마이그레이션 002 (앵커·평면 일치 컬럼) | DB | DB-01 | P0 (네이티브 N1) |
+| BE-14 | 앱용 토큰 세션 (Bearer) | BE | BE-03 | P0 (네이티브 N1) |
+| BE-15 | 게시·주변 조회에 앵커 정보 | BE | DB-03, BE-13 | P0 (네이티브 N1) |
+| BE-16 | 열람 요청에 평면 일치 기록 | BE | DB-03, BE-09 | P0 (네이티브 N1) |
 | FE-00 | 스타일 가이드 작성 | FE(문서) | — | P0 |
 | FE-01 | 프론트 골격·API 클라이언트·스토어·화면 전환 | FE | OPS-01, BE-03 | P0 |
 | FE-02 | 로그인·회원가입 화면 | FE | FE-00, FE-01, BE-03 | P0 |
@@ -221,6 +233,23 @@ flowchart LR
   - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** DB-01
 - **관련 ID:** 원칙 4.2(DB 행), 4.1, 5.1
+
+#### DB-03 마이그레이션 002 (앵커·평면 일치 컬럼)
+
+- **목표:** 네이티브 N1에 필요한 컬럼을 두 번째 마이그레이션으로 더한다.
+- **수행 작업**
+  - `backend/db/migrations/002_native_anchor.sql` 생성: ERD 1.6의 DDL을 그대로 쓴다(`capsules.cloud_anchor_id`, `capsules.geo_pose`, `view_records.plane_match`).
+  - `docs/schema.sql`과 `001_init.sql`은 바꾸지 않는다(바이트 일치 테스트 유지, ERD E11).
+  - `backend/test/integration/migrate.test.js`: 적용 파일 목록 기대값에 `002_native_anchor.sql`을 더하고 새 컬럼의 존재·기본값을 검증한다.
+  - 로컬 개발 DB(`drop_app`)와 테스트 DB에는 `npm run migrate`와 테스트 헬퍼가 적용한다. 스크립트 없이 확인할 때는 postgresql MCP를 쓴다(2.5).
+- **완료 조건**
+  - [ ] 빈 DB에서 `npm run migrate` 후 `capsules.cloud_anchor_id`(text, NULL 허용), `capsules.geo_pose`(jsonb, NULL 허용), `view_records.plane_match`(boolean, NOT NULL, 기본값 false)가 존재한다
+  - [ ] `001`만 적용된 DB(기존 행 있음)에 `002`를 적용하면 기존 캡슐의 두 컬럼은 NULL, 기존 열람 기록의 `plane_match`는 false다
+  - [ ] 다시 실행하면 아무 파일도 재적용하지 않는다
+  - [ ] `001_init.sql`이 `docs/schema.sql`과 여전히 바이트 단위로 같다
+  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+- **선행 Task:** DB-01
+- **관련 ID:** 네이티브 PRD 6.1, ERD 1.6·E9~E11
 
 ### 6.2 백엔드
 
@@ -484,6 +513,58 @@ flowchart LR
   - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** BE-08
 - **관련 ID:** FR-03, FR-08, Q-14, ERD v0.4
+
+#### BE-14 앱용 토큰 세션 (Bearer)
+
+- **목표:** 네이티브 앱이 쿠키 없이 같은 세션을 쓸 수 있게, 토큰을 응답 본문으로 주고 `Authorization` 헤더로 받는다.
+- **수행 작업**
+  - `src/routes/auth.js`: 가입·로그인 요청에 `X-Client: app` 헤더가 있으면 응답 본문에 `token`을 더하고 `Set-Cookie`를 보내지 않는다. 헤더가 없으면 지금과 같다(쿠키만, 본문에 토큰 없음). 웹에서 토큰이 스크립트에 노출되지 않게 하려는 구분이다.
+  - `src/middleware/auth.js`: `Authorization: Bearer <토큰>`이 있으면 그 토큰으로, 없으면 쿠키 `sid`로 세션을 확인한다. 이후 처리는 같다(SHA-256 → `token_hash` 조회).
+  - 로그아웃: 헤더로 온 토큰의 세션도 지운다.
+  - `src/lib/log.js`: `Authorization` 헤더 값이 로그에 남지 않는지 확인한다.
+- **완료 조건**
+  - [ ] FR-N01 `X-Client: app`으로 가입·로그인하면 본문에 `token`이 있고 `Set-Cookie`가 없다. 헤더가 없으면 본문에 `token`이 없고 쿠키가 있다(기존 동작 유지)
+  - [ ] 그 토큰을 `Authorization: Bearer`로 보내면 `GET /api/me`가 200이다
+  - [ ] 위조 토큰, 만료 세션, `Bearer` 형식이 아닌 헤더는 401 `AUTH_REQUIRED`
+  - [ ] 헤더와 쿠키가 둘 다 있으면 헤더를 쓴다
+  - [ ] 헤더 토큰으로 로그아웃하면 204이고 같은 토큰으로 다시 부르면 401
+  - [ ] 요청 로그에 토큰이 남지 않는다
+  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+- **선행 Task:** BE-03
+- **관련 ID:** 네이티브 PRD FR-N01·NFR-N03, M-04, 원칙 5.2·5.3
+
+#### BE-15 게시·주변 조회에 앵커 정보
+
+- **목표:** 캡슐에 클라우드 앵커 ID와 Geospatial 포즈를 저장하고 주변 조회로 돌려준다.
+- **수행 작업**
+  - `src/routes/capsules.js`(게시): 선택 입력 `cloud_anchor_id`(1~128자, 영문·숫자·`-`·`_`), `geo_pose`(`{ lat, lng, alt, qx, qy, qz, qw }` 모두 유한한 숫자, `lat`·`lng` 범위) 검증 → 어긋나면 400 `VALIDATION_FAILED`. 둘 다 없어도 된다(웹 호환).
+  - `src/repositories/capsules.js`: INSERT에 두 컬럼 추가, 주변 조회 SELECT에 두 컬럼 추가.
+  - `src/services/capsules.js`: 주변 조회 응답 항목을 `{ id, title, lat, lng, heading, thumb_url, is_mine, cloud_anchor_id, geo_pose }`로(없으면 `null`).
+  - 같은 `media_id` 재게시(멱등 200)는 기존 캡슐을 그대로 돌려주고 앵커 정보를 덮어쓰지 않는다.
+  - 서버는 두 값의 진위를 확인하지 않는다(네이티브 PRD RISK-N06).
+- **완료 조건**
+  - [ ] FR-N06 `cloud_anchor_id`·`geo_pose`를 보내면 그대로 저장되고, 보내지 않으면 NULL로 저장되며 둘 다 201이다
+  - [ ] `cloud_anchor_id`가 빈 문자열·129자·허용 밖 문자면, `geo_pose`에 값이 빠지거나 숫자가 아니거나 `lat`이 91이면 400 `VALIDATION_FAILED`
+  - [ ] FR-N07 주변 조회 응답 항목에 두 값이 담기고, 없는 캡슐은 `null`이다
+  - [ ] 같은 유저가 같은 `media_id`로 다른 `cloud_anchor_id`를 보내 재게시해도 200이고 저장된 값이 바뀌지 않는다
+  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+- **선행 Task:** DB-03, BE-13
+- **관련 ID:** 네이티브 PRD FR-N06·FR-N07·NQ-09·RISK-N06, ERD 1.6·E9·E10
+
+#### BE-16 열람 요청에 평면 일치 기록
+
+- **목표:** `POST /api/capsules/:id/open`이 `plane_match`를 받아 열람 기록에 남긴다.
+- **수행 작업**
+  - route: 선택 입력 `plane_match`(boolean, 없으면 `false`). boolean이 아니면 400 `VALIDATION_FAILED`.
+  - `src/repositories/viewRecords.js`: INSERT에 `plane_match` 추가.
+  - 판정에는 쓰지 않는다. `false`여도 GPS 판정을 통과하면 열람을 허용한다(네이티브 PRD NQ-06).
+- **완료 조건**
+  - [ ] FR-N08 `plane_match: true`로 열람하면 `view_records.plane_match`가 `true`, 보내지 않으면 `false`다
+  - [ ] `plane_match`가 문자열·숫자면 400 `VALIDATION_FAILED`이고 확인 순서(401 → 400 → 404 → 422 → 403)가 그대로다
+  - [ ] `plane_match: false`여도 반경 안이면 200이다
+  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+- **선행 Task:** DB-03, BE-09
+- **관련 ID:** 네이티브 PRD FR-N08·NQ-06, 도메인 5.4, ERD 1.6
 
 ### 6.3 프론트엔드
 
@@ -851,3 +932,4 @@ v0.1의 확인 필요 9건을 아래와 같이 결정했다.
 | 9 | S3 CORS | AllowedOrigins = 서비스 도메인 하나, AllowedMethods = PUT, AllowedHeaders = 서명된 헤더만(`Content-Type`, `If-None-Match`, `x-amz-tagging`) | OPS-02, 원칙 5.2 |
 | 10 | 드롭 위치 직접 배치 (v0.6) | 프레임을 끌어 앵커를 정하고 드롭하는 사람 위치에서 PRM-20(10m) 안으로 제한, 서버가 `user_lat`·`user_lng`로 검증. 사용자 좌표는 저장하지 않아 DB·ERD 변경 없음 | BE-12, FE-13, PRD FR-03·Q-13, 도메인 OQ-34 |
 | 11 | 프레임 방향 회전 (v0.7) | 사진을 먼저 고르고 W-13에서 위치와 함께 슬라이더로 0~359° 회전. 기존 `heading` 컬럼을 프레임 방향으로 쓰고 주변 조회 응답에 담는다. DB 변경 없음 | BE-13, FE-14, PRD FR-03·FR-08·Q-14, 도메인 OQ-35, ERD v0.4 |
+| 12 | 네이티브 N1 백엔드 Task 위치 (v0.8) | `/develop-backend` 스킬이 이 문서를 읽으므로 DB-03, BE-14~16을 여기에 둔다. 서버는 웹 요청과 호환을 유지한다(앵커 입력은 선택, 토큰 본문 전달은 `X-Client: app`일 때만) | DB-03, BE-14~16, `12-native-plan.md`, 네이티브 PRD NQ-09 |

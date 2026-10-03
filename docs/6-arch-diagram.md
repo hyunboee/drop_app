@@ -142,7 +142,7 @@ flowchart TD
 
 메인 다이어그램에는 넣지 않는다 (PRD 3.2, FR-12).
 
-- Unity/ARCore 네이티브 앱: 평면 스캔, 기기 무결성, 전체 현장 증명 판정 (Q-01, Q-02, Q-11, 도메인 5.4)
+- 네이티브 앱(`10-native-PRD.md`, Android는 Kotlin + ARCore SDK): 평면 스캔, 기기 무결성, 전체 현장 증명 판정 (Q-01, Q-02, Q-11, 도메인 5.4)
 - App Store / Google Play 인앱결제와 스토어 서버 알림(환불) (BR-07~09, IAP-01~07)
 - 보상형 광고 SDK, 송금(정산 출금), 본인인증 (PRM-10, ST-07, ST-09)
 - 푸시(FCM/APNs)와 지오펜싱 (BR-25)
