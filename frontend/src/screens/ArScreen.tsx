@@ -5,6 +5,7 @@ import { AccuracyBanner } from '../components/AccuracyBanner';
 import { DropSheet } from '../components/DropSheet';
 import { Fab } from '../components/Fab';
 import { FabMenu, type Anchor } from '../components/FabMenu';
+import { MiniMap } from '../components/MiniMap';
 import { Notice, type NoticeState } from '../components/Notice';
 import { OpenView } from '../components/OpenView';
 import { PlaceBar } from '../components/PlaceBar';
@@ -138,6 +139,7 @@ export function ArScreen() {
         />
       </Suspense>
       <AccuracyBanner visible={position != null && isLowAccuracy(position.accuracy)} />
+      {position && !opened && <MiniMap position={position} points={frames} />}
       {status && !place && <p className={styles.status}>{status}</p>}
       {place && (
         <PlaceBar

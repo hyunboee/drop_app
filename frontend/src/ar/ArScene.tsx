@@ -1,6 +1,10 @@
 import { useEffect, useRef } from 'react';
 import 'aframe';
 import '@ar-js-org/ar.js/aframe/build/aframe-ar-new-location-only.mjs';
+import { DeviceOrientationControls } from '@ar-js-org/ar.js/three.js/build/ar-threex-location-only.mjs';
+
+// AR.js mjs 빌드의 arjs-device-orientation-controls(모바일 전용)가 전역 THREEx를 찾는데 mjs는 전역을 만들지 않는다
+(window as any).THREEx = { DeviceOrientationControls };
 
 export interface ArFrame {
   id: string;
@@ -119,8 +123,19 @@ export default function ArScene({ frames, onTap, placeAt = null, placeHeading = 
       if (id) onTapRef.current(id);
     };
     scene.addEventListener('click', onClick);
+    // arjs-webcam-texture는 해상도를 지정하지 않아 기본값(640×480)으로 열린다. 영상이 열리면 해상도를 올린다
+    const onVideo = (e: Event) => {
+      const video = e.target as HTMLVideoElement;
+      if (video.parentElement !== document.body) return;
+      (video.srcObject as MediaStream | null)
+        ?.getVideoTracks()[0]
+        ?.applyConstraints({ width: { ideal: 1920 }, height: { ideal: 1080 } })
+        .catch(() => {}); // 지원하지 않는 기기는 기본 해상도로 둔다
+    };
+    document.addEventListener('loadedmetadata', onVideo, true);
     return () => {
       scene.removeEventListener('click', onClick);
+      document.removeEventListener('loadedmetadata', onVideo, true);
       // arjs-webcam-texture가 body에 붙인 카메라 영상을 정리한다
       document.querySelectorAll<HTMLVideoElement>('body > video').forEach((v) => {
         (v.srcObject as MediaStream | null)?.getTracks().forEach((t) => t.stop());
@@ -145,7 +160,7 @@ export default function ArScene({ frames, onTap, placeAt = null, placeHeading = 
       cursor="rayOrigin: mouse"
       raycaster="objects: .capsule-frame"
     >
-      <a-camera gps-new-camera="gpsMinDistance: 5" />
+      <a-camera gps-new-camera="gpsMinDistance: 2" />
       {frames.map((f) => (
         <a-entity key={f.id} gps-new-entity-place={`latitude: ${f.lat}; longitude: ${f.lng}`} data-capsule-id={f.id} class="capsule-frame" rotation={yaw(f.heading)}>
           <a-plane

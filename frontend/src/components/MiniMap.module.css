@@ -1,0 +1,41 @@
+.map {
+  position: absolute;
+  /* 정확도 배너(40px) 아래 */
+  top: calc(40px + var(--safe-top) + var(--space-3));
+  right: var(--space-4);
+  z-index: 1;
+  width: 96px;
+  height: 96px;
+  border: 1px solid var(--color-line-subtle);
+  border-radius: var(--radius-round);
+  background: var(--color-fab-bg);
+  backdrop-filter: var(--blur-glass);
+  box-shadow: var(--shadow-float);
+  /* AR 프레임 탭을 가로채지 않는다 */
+  pointer-events: none;
+}
+
+.ring {
+  fill: none;
+  stroke: var(--color-line-subtle);
+  stroke-width: 1;
+}
+
+.north {
+  fill: var(--color-text-muted);
+  font: var(--type-label);
+  font-size: 9px;
+  text-anchor: middle;
+}
+
+.dotIn {
+  fill: var(--color-frame-in);
+}
+
+.dotOut {
+  fill: var(--color-frame-out);
+}
+
+.me {
+  fill: var(--color-text);
+}
