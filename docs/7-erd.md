@@ -10,6 +10,7 @@
 | 0.2 | 2026-10-01 | Claude Code | 확인 필요 8건 결정 반영: 잠금 컬럼 삭제(메모리 카운터), 증명 ID 컬럼 삭제, `users.terms_version` 추가, 운영용 테이블 `schema_migrations`, 로그인 성공 시 만료 세션 삭제, 3장을 결정 내역으로 변경 |
 | 0.3 | 2026-10-01 | Claude Code | 문서 정합성 점검: 출처 문서 버전을 최신(도메인 v0.8, PRD v0.8, 시나리오 v0.4, 와이어프레임 v0.4, 원칙 v0.4, 아키텍처 v0.3)으로 갱신 |
 | 0.4 | 2026-10-02 | Claude Code | 프레임 방향 회전(PRD v1.2 Q-14): `capsules.heading`의 의미를 드롭 시 기기 방향에서 프레임 앞면이 바라보는 방위로 변경. 타입·제약·DDL은 그대로 |
+| 0.7 | 2026-10-04 | Claude Code | 실증에서 정한 크기 저장(`13-capsule-dev-plan.md` 17장): 1.7 추가. `capsules.size_m`과 마이그레이션 `003` DDL, 결정 E13(회전은 `heading` 재사용, 결제 관련 컬럼은 N3) |
 | 0.6 | 2026-10-04 | Claude Code | 캡슐 디벨롭 기획(`13-capsule-dev-plan.md`) 대조: 1.4 인덱스가 주변 조회의 `opened` 계산(BE-17)에도 쓰임을 명시, 결정 E12(N1.5는 DB 변경 없음, `model_kind` 미도입). 2부의 프라이빗·개봉 날짜·영상·상점 스키마는 결정 전이라 반영하지 않는다 |
 | 0.5 | 2026-10-03 | Claude Code | 네이티브 N1(네이티브 PRD v0.3): 1.6 추가. `capsules.cloud_anchor_id`·`geo_pose`, `view_records.plane_match`와 마이그레이션 `002` DDL, 결정 E9~E11. `schema.sql`은 `001`의 원본이라 바꾸지 않는다 |
 
@@ -185,6 +186,27 @@ ALTER TABLE view_records
 
 ---
 
+### 1.7 캡슐 크기 (마이그레이션 003)
+
+`13-capsule-dev-plan.md` FR-X06에 필요한 컬럼 하나만 더한다. 이 절이 `backend/db/migrations/003_capsule_size.sql`의 원본이다.
+
+| 테이블 | 컬럼 | 타입 | 제약 | 근거 ID |
+|---|---|---|---|---|
+| capsules | size_m | real | NOT NULL, DEFAULT `0.4`, CHECK `size_m BETWEEN 0.1 AND 2.0` | FR-X06, XP-01·XP-02. AR에 그리는 사진의 긴 변 길이(m). 웹에서 드롭한 캡슐과 기존 행은 기본값 |
+
+```sql
+-- 003_capsule_size.sql
+ALTER TABLE capsules
+  ADD COLUMN size_m real NOT NULL DEFAULT 0.4
+    CONSTRAINT capsules_size_m_check CHECK (size_m BETWEEN 0.1 AND 2.0);  -- 사진 긴 변 길이(m)
+```
+
+- 회전은 컬럼을 더하지 않는다. `capsules.heading`(0~359)이 이미 프레임 앞면의 방위다(FR-X07).
+- 가로세로 비율은 저장하지 않는다. 앱이 내려받은 썸네일의 비율로 그린다.
+- 유료 열람(`view_price`, 결제 기록)과 등급 CHECK 넓히기는 여기에 넣지 않는다. 실결제(N3)와 함께 2장 개념 ERD를 물리 설계로 옮길 때 추가한다(`13-capsule-dev-plan.md` 17.4, DQ-10).
+
+---
+
 ## 2. 후속 단계 개념 ERD
 
 도메인 정의서 5장 애그리거트(INV-01~10) 기준의 **개념 모델**이다. 엔티티와 관계, 키와 핵심 속성 몇 개만 적었고, **실제 테이블·컬럼·타입·인덱스 설계는 하지 않는다.** 실제 설계는 해당 FR을 구현할 때(FR-12, 네이티브 전환 Q-01) 별도로 한다(P-02).
@@ -320,3 +342,4 @@ v0.1의 확인 필요 8건을 아래와 같이 결정했다.
 | E10 | `cloud_anchor_id` NULL 허용 (v0.5) | 허용한다. 웹 캡슐과의 호환(네이티브 PRD NQ-09) 때문이며, 앵커 없이는 게시하지 않는 규칙(NQ-04)은 앱이 지킨다 | 1.6, 네이티브 PRD FR-N06 |
 | E11 | `schema.sql` (v0.5) | 바꾸지 않는다. `001_init.sql`과 바이트 단위로 같아야 하는 테스트가 있다. `002`의 원본은 1.6이다 | 1.6, `8-plan.md` DB-03 |
 | E12 | N1.5(3D 캡슐 연출)의 스키마 (v0.6) | 변경 없음. 원본 기획의 `capsules.model_kind`는 값이 하나뿐이라 넣지 않고(P-02), 사용자가 모델을 고르는 상점 단계에서 CHECK와 함께 추가한다. `opened`는 저장하지 않고 조회 때 계산한다 | 1.4, `13-capsule-dev-plan.md` 8장·CQ-05 |
+| E13 | 캡슐 크기 저장 (v0.7) | `size_m` 한 컬럼. 회전은 `heading` 재사용, 비율은 썸네일에서 얻는다. 결제·등급 관련 컬럼은 값이 쓰이는 N3에 추가한다(P-02) | 1.7, `13-capsule-dev-plan.md` 17.4 |

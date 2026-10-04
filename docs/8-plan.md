@@ -13,6 +13,8 @@
 | 0.5 | 2026-10-02 | Claude Code | 프론트 구현 계획 반영: FE-03 선행에 FE-02 추가(Button·사진 배경 화면 재사용) |
 | 0.6 | 2026-10-02 | Claude Code | 드롭 위치 직접 배치(도메인 v1.0 OQ-34, PRD v1.1 Q-13) 반영: BE-12 드롭 배치 거리 검증, FE-13 드롭 위치 정하기 Task 추가, 결정 #10 |
 | 0.7 | 2026-10-02 | Claude Code | 프레임 방향 회전(PRD v1.2 Q-14) 반영: BE-13 주변 조회 응답 `heading`, FE-14 사진 먼저 → 위치·방향 정하기 Task 추가, 결정 #11 |
+| 1.1 | 2026-10-04 | Claude Code | 네이티브 홈·보관함(네이티브 PRD v0.8 FR-N12·FR-N13) 백엔드 Task 추가: BE-19 내 캡슐·보관함 목록 API(완료), 결정 #15 |
+| 1.0 | 2026-10-04 | Claude Code | 실증에서 정한 크기 저장(`13-capsule-dev-plan.md` 17장) 백엔드 Task 추가: DB-04 마이그레이션 003, BE-18 게시·주변 조회에 `size_m`, 결정 #14 |
 | 0.9 | 2026-10-04 | Claude Code | N1.5(3D 캡슐 연출) 백엔드 Task 추가: BE-17 주변 조회 응답에 `opened`, 결정 #13 |
 | 0.8 | 2026-10-03 | Claude Code | 네이티브 N1(네이티브 PRD v0.3)의 백엔드·DB Task 추가: DB-03 마이그레이션 002, BE-14 앱용 토큰 세션, BE-15 게시·주변 조회에 앵커 정보, BE-16 열람 평면 일치 기록, 결정 #12. 앱·운영 Task는 `12-native-plan.md`에 둔다 |
 
@@ -82,6 +84,10 @@ flowchart LR
   DB03 --> BE16["BE-16"]
   BE09 --> BE16
   BE15 --> BE17["BE-17"]
+  DB03 --> DB04["DB-04"]
+  DB04 --> BE18["BE-18"]
+  BE15 --> BE18
+  BE09 --> BE19["BE-19"]
   BE01 --> OPS02["OPS-02"]
 
   FE00["FE-00"] --> FE02
@@ -143,6 +149,8 @@ flowchart LR
 | 추가 (v0.6) | BE-12, FE-13 (FR-03 드롭 위치 직접 배치) | 프레임을 끌어 내 위치 10m 안에 놓은 캡슐이 그 자리에 보임 |
 | 추가 (v0.7) | BE-13, FE-14 (FR-03 프레임 방향 회전) | 슬라이더로 돌린 방향 그대로 다른 사용자에게도 프레임이 보임 |
 | 네이티브 N1 (v0.8) | DB-03, BE-14, BE-15, BE-16 | 주차 배치는 `12-native-plan.md` 4장 |
+| 네이티브 N1 홈·보관함 (v1.1) | BE-19 | 완료 |
+| 네이티브 N1 크기 저장 (v1.0) | DB-04, BE-18 | BE-15 뒤. 앱의 드롭 Task(APP-07~10)보다 먼저 |
 | N1.5 (v0.9) | BE-17 | N1 KPI 충족 뒤. 일정은 `13-capsule-dev-plan.md` 9장 |
 
 > OPS-04는 PRD 8장 주석대로 2일 안에 못 끝나면 MVP 완료 직후 첫 작업으로 한다.
@@ -174,6 +182,9 @@ flowchart LR
 | BE-15 | 게시·주변 조회에 앵커 정보 | BE | DB-03, BE-13 | P0 (네이티브 N1) |
 | BE-16 | 열람 요청에 평면 일치 기록 | BE | DB-03, BE-09 | P0 (네이티브 N1) |
 | BE-17 | 주변 조회 응답에 `opened` | BE | BE-15 | P0 (N1.5) |
+| DB-04 | 마이그레이션 003 (캡슐 크기) | DB | DB-03 | P0 (네이티브 N1) |
+| BE-18 | 게시·주변 조회에 `size_m` | BE | DB-04, BE-15 | P0 (네이티브 N1) |
+| BE-19 | 내 캡슐·보관함 목록 API | BE | BE-09 | P0 (네이티브 N1) |
 | FE-00 | 스타일 가이드 작성 | FE(문서) | — | P0 |
 | FE-01 | 프론트 골격·API 클라이언트·스토어·화면 전환 | FE | OPS-01, BE-03 | P0 |
 | FE-02 | 로그인·회원가입 화면 | FE | FE-00, FE-01, BE-03 | P0 |
@@ -527,13 +538,13 @@ flowchart LR
   - 로그아웃: 헤더로 온 토큰의 세션도 지운다.
   - `src/lib/log.js`: `Authorization` 헤더 값이 로그에 남지 않는지 확인한다.
 - **완료 조건**
-  - [ ] FR-N01 `X-Client: app`으로 가입·로그인하면 본문에 `token`이 있고 `Set-Cookie`가 없다. 헤더가 없으면 본문에 `token`이 없고 쿠키가 있다(기존 동작 유지)
-  - [ ] 그 토큰을 `Authorization: Bearer`로 보내면 `GET /api/me`가 200이다
-  - [ ] 위조 토큰, 만료 세션, `Bearer` 형식이 아닌 헤더는 401 `AUTH_REQUIRED`
-  - [ ] 헤더와 쿠키가 둘 다 있으면 헤더를 쓴다
-  - [ ] 헤더 토큰으로 로그아웃하면 204이고 같은 토큰으로 다시 부르면 401
-  - [ ] 요청 로그에 토큰이 남지 않는다
-  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+  - [x] FR-N01 `X-Client: app`으로 가입·로그인하면 본문에 `token`이 있고 `Set-Cookie`가 없다. 헤더가 없으면 본문에 `token`이 없고 쿠키가 있다(기존 동작 유지)
+  - [x] 그 토큰을 `Authorization: Bearer`로 보내면 `GET /api/me`가 200이다
+  - [x] 위조 토큰, 만료 세션, `Bearer` 형식이 아닌 헤더는 401 `AUTH_REQUIRED`
+  - [x] 헤더와 쿠키가 둘 다 있으면 헤더를 쓴다
+  - [x] 헤더 토큰으로 로그아웃하면 204이고 같은 토큰으로 다시 부르면 401
+  - [x] 요청 로그에 토큰이 남지 않는다
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** BE-03
 - **관련 ID:** 네이티브 PRD FR-N01·NFR-N03, M-04, 원칙 5.2·5.3
 
@@ -586,6 +597,57 @@ flowchart LR
   - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
 - **선행 Task:** BE-15
 - **관련 ID:** `13-capsule-dev-plan.md` FR-C05·8장·CQ-04, FR-08, NFR-01, ERD 1.4·E12
+
+#### DB-04 마이그레이션 003 (캡슐 크기)
+
+- **목표:** 드롭할 때 정한 사진 크기를 저장할 컬럼을 더한다.
+- **수행 작업**
+  - `backend/db/migrations/003_capsule_size.sql` 생성: ERD 1.7의 DDL을 그대로 쓴다(`capsules.size_m`).
+  - `docs/schema.sql`과 `001_init.sql`은 바꾸지 않는다(ERD E11).
+  - `backend/test/integration/migrate.test.js`: 적용 파일 목록 기대값에 `003_capsule_size.sql`을 더하고 컬럼의 기본값·CHECK를 검증한다.
+- **완료 조건**
+  - [ ] 빈 DB에서 `npm run migrate` 후 `capsules.size_m`(real, NOT NULL, 기본값 0.4)이 존재한다
+  - [ ] 기존 캡슐 행의 `size_m`은 0.4다
+  - [ ] `size_m`이 0.1 미만이거나 2.0 초과인 INSERT는 CHECK 위반으로 실패한다
+  - [ ] 다시 실행하면 아무 파일도 재적용하지 않는다
+  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+- **선행 Task:** DB-03
+- **관련 ID:** `13-capsule-dev-plan.md` FR-X06·XP-01·XP-02·17.4, ERD 1.7·E13
+
+#### BE-18 게시·주변 조회에 `size_m`
+
+- **목표:** 앱이 드롭할 때 정한 크기를 저장하고, 주변 조회에서 돌려줘 모든 사람에게 같은 크기로 보이게 한다.
+- **수행 작업**
+  - `src/params.js`: `XP_01_SIZE_M_MIN = 0.1`, `XP_01_SIZE_M_MAX = 2.0`, `XP_02_SIZE_M_DEFAULT = 0.4`.
+  - `src/routes/capsules.js`(게시): 요청 본문의 `size_m`(선택)을 검증한다. 유한한 숫자가 아니거나 범위를 벗어나면 400 `INVALID_INPUT`. 없으면 기본값.
+  - `src/repositories/capsules.js`: INSERT와 주변 조회 SELECT에 `size_m`을 더한다.
+  - `src/services/capsules.js`: 주변 조회 응답 항목에 `size_m`(number)을 더한다.
+  - `test/integration/nearby.test.js`의 응답 키 기대값에 `size_m`을 더한다.
+- **완료 조건**
+  - [ ] FR-X06 `size_m: 1.2`로 게시한 캡슐이 주변 조회에서 `size_m: 1.2`로 나온다
+  - [ ] `size_m` 없이 게시하면(웹) `0.4`로 저장된다
+  - [ ] `size_m`이 `0.05`, `2.5`, `"big"`이면 400 `INVALID_INPUT`이고 캡슐이 만들어지지 않는다
+  - [ ] 웹 프론트 테스트가 그대로 통과한다(새 필드 무시)
+  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+- **선행 Task:** DB-04, BE-15
+- **관련 ID:** `13-capsule-dev-plan.md` FR-X06·17.4, FR-07, FR-08, ERD 1.7
+
+#### BE-19 내 캡슐·보관함 목록 API
+
+- **목표:** 앱의 홈(NW-16)과 보관함(NW-17)이 쓸 목록 두 개를 준다.
+- **수행 작업**
+  - `src/repositories/capsules.js`: `findMyCapsules`(세션 유저의 Active 캡슐, `published_at` 최신순, 다른 사람의 열람 수 `view_count`), `findOpenedCapsules`(세션 유저의 열람 기록이 있는 Active 캡슐, 캡슐마다 한 행, 최근에 연 순서).
+  - `src/services/capsules.js`: `listMine`, `listArchive`. `thumb_url`·`media_url`은 미디어 프록시 경로.
+  - `src/routes/capsules.js`: `GET /api/capsules/mine`, `GET /api/capsules/archive`.
+  - DB 변경과 인덱스 추가는 없다.
+- **완료 조건**
+  - [x] FR-N12 `/mine`은 내 Active 캡슐만 최신순으로 주고(삭제·만료·남의 캡슐 제외) 항목 키는 `id, title, grade, thumb_url, lat, lng, expires_at, view_count`다(좌표는 내 캡슐 지도 FR-N14용)
+  - [x] `view_count`는 다른 사람이 연 횟수다(내가 연 것은 세지 않는다)
+  - [x] FR-N13 `/archive`는 내가 연 Active 캡슐을 한 번씩만 주고(두 번 열어도 한 행, 만료·삭제 제외) 항목 키는 `id, title, thumb_url, media_url, opened_at`다
+  - [x] 로그인하지 않으면 두 경로 모두 401 `AUTH_REQUIRED`
+  - [x] `npm test` 전체 통과, 라인 커버리지 90% 이상
+- **선행 Task:** BE-09
+- **관련 ID:** 네이티브 PRD FR-N12·FR-N13·6.1, NW-16, NW-17
 
 ### 6.3 프론트엔드
 
@@ -955,3 +1017,6 @@ v0.1의 확인 필요 9건을 아래와 같이 결정했다.
 | 11 | 프레임 방향 회전 (v0.7) | 사진을 먼저 고르고 W-13에서 위치와 함께 슬라이더로 0~359° 회전. 기존 `heading` 컬럼을 프레임 방향으로 쓰고 주변 조회 응답에 담는다. DB 변경 없음 | BE-13, FE-14, PRD FR-03·FR-08·Q-14, 도메인 OQ-35, ERD v0.4 |
 | 12 | 네이티브 N1 백엔드 Task 위치 (v0.8) | `/develop-backend` 스킬이 이 문서를 읽으므로 DB-03, BE-14~16을 여기에 둔다. 서버는 웹 요청과 호환을 유지한다(앵커 입력은 선택, 토큰 본문 전달은 `X-Client: app`일 때만) | DB-03, BE-14~16, `12-native-plan.md`, 네이티브 PRD NQ-09 |
 | 13 | N1.5 백엔드 범위 (v0.9) | 주변 조회 응답에 `opened`만 더한다. 원본 기획의 마이그레이션 003(`model_kind`)과 인덱스 추가는 하지 않는다. 프라이빗·개봉 날짜·영상·상점의 백엔드 Task는 `13-capsule-dev-plan.md` 15장의 결정 뒤에 만든다 | BE-17, `13-capsule-dev-plan.md` 8장·16장, ERD E12 |
+| 14 | 실증 규칙의 백엔드 범위 (v1.0) | 크기 저장(`size_m`)만 Task로 만든다. 회전은 `heading`, 사진 받기는 기존 원본 프록시, 삭제는 FR-11을 그대로 쓴다. 유료 열람·등급 넓히기는 실결제(N3)가 필요해 설계만 적는다 | `13-capsule-dev-plan.md` 17.4·DQ-10, ERD 1.7 |
+| 15 | 홈·보관함의 백엔드 범위 (v1.1) | 목록 API 두 개만 더한다. 숫자(남긴 캡슐, 열어 본 캡슐, 곧 만료, 등급별 개수)는 앱이 목록에서 센다. 페이지 나누기는 넣지 않는다(브론즈 30일이라 목록이 짧다. 길어지면 추가) | 네이티브 PRD 6.1, BE-19 |
+| 16 | 앵커 ID·크기 저장 구현 (2026-10-04) | 마이그레이션 002·003을 만들고 게시(`cloud_anchor_id`, `size_m`, 둘 다 선택)와 주변 조회 응답에 반영했다(DB-03, DB-04, BE-15 일부, BE-18). `geo_pose`와 열람 요청의 `plane_match`(BE-15의 나머지, BE-16)는 Geospatial·열람 연결 때 한다. 백엔드 테스트 216개 통과 | DB-03, DB-04, BE-15, BE-18, ERD 1.6·1.7 |
