@@ -1,6 +1,6 @@
 # Drop 네이티브 와이어프레임 (N1)
 
-> 출처: `10-native-PRD.md`(네이티브 PRD v0.6, 3장 범위·4장 FR-N·4.1 NP 파라미터·7장 UX 원칙), `4-wireframes.md`(웹 와이어프레임 v0.7), `1-domain-definition.md`(도메인 정의서 v1.1). Android 세로 화면 기준이며 N1 범위 화면만 그린다. 웹과 같은 화면은 다시 그리지 않고 `4-wireframes.md`의 W-xx를 가리킨다. 수치는 PRM-xx / M-xx / NP-xx ID로만 참조하고, 색상·서체는 `9-style-guide.md`를 따른다.
+> 출처: `10-native-PRD.md`(네이티브 PRD v0.7, 3장 범위·4장 FR-N·4.1 NP 파라미터·7장 UX 원칙), `4-wireframes.md`(웹 와이어프레임 v0.7), `1-domain-definition.md`(도메인 정의서 v1.1). Android 세로 화면 기준이며 N1 범위 화면만 그린다. 웹과 같은 화면은 다시 그리지 않고 `4-wireframes.md`의 W-xx를 가리킨다. 수치는 PRM-xx / M-xx / NP-xx ID로만 참조하고, 색상·서체는 `9-style-guide.md`를 따른다.
 
 ## 1. 변경 이력
 

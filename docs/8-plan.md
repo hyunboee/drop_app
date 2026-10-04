@@ -1,6 +1,6 @@
 # Drop MVP 실행 계획
 
-> 출처: `1-domain-definition.md`(도메인 정의서 v1.1), `2-PRD.md`(PRD v1.2), `3-user-scenario.md`(시나리오 v0.6), `4-wireframes.md`(와이어프레임 v0.7), `5-project-principle.md`(프로젝트 원칙 v0.7), `6-arch-diagram.md`(아키텍처 v0.6), `7-erd.md`(ERD v0.5), `10-native-PRD.md`(네이티브 PRD v0.6, DB-03·BE-14~16만), `schema.sql`, `.claude/skills/develop-backend`·`develop-frontend` SKILL. 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
+> 출처: `1-domain-definition.md`(도메인 정의서 v1.1), `2-PRD.md`(PRD v1.2), `3-user-scenario.md`(시나리오 v0.6), `4-wireframes.md`(와이어프레임 v0.7), `5-project-principle.md`(프로젝트 원칙 v0.7), `6-arch-diagram.md`(아키텍처 v0.6), `7-erd.md`(ERD v0.6), `10-native-PRD.md`(네이티브 PRD v0.7, DB-03·BE-14~16만), `13-capsule-dev-plan.md`(캡슐 디벨롭 기획 v0.1, BE-17만), `schema.sql`, `.claude/skills/develop-backend`·`develop-frontend` SKILL. 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
 
 ## 1. 변경 이력
 
@@ -13,6 +13,7 @@
 | 0.5 | 2026-10-02 | Claude Code | 프론트 구현 계획 반영: FE-03 선행에 FE-02 추가(Button·사진 배경 화면 재사용) |
 | 0.6 | 2026-10-02 | Claude Code | 드롭 위치 직접 배치(도메인 v1.0 OQ-34, PRD v1.1 Q-13) 반영: BE-12 드롭 배치 거리 검증, FE-13 드롭 위치 정하기 Task 추가, 결정 #10 |
 | 0.7 | 2026-10-02 | Claude Code | 프레임 방향 회전(PRD v1.2 Q-14) 반영: BE-13 주변 조회 응답 `heading`, FE-14 사진 먼저 → 위치·방향 정하기 Task 추가, 결정 #11 |
+| 0.9 | 2026-10-04 | Claude Code | N1.5(3D 캡슐 연출) 백엔드 Task 추가: BE-17 주변 조회 응답에 `opened`, 결정 #13 |
 | 0.8 | 2026-10-03 | Claude Code | 네이티브 N1(네이티브 PRD v0.3)의 백엔드·DB Task 추가: DB-03 마이그레이션 002, BE-14 앱용 토큰 세션, BE-15 게시·주변 조회에 앵커 정보, BE-16 열람 평면 일치 기록, 결정 #12. 앱·운영 Task는 `12-native-plan.md`에 둔다 |
 
 ---
@@ -80,6 +81,7 @@ flowchart LR
   BE13 --> BE15
   DB03 --> BE16["BE-16"]
   BE09 --> BE16
+  BE15 --> BE17["BE-17"]
   BE01 --> OPS02["OPS-02"]
 
   FE00["FE-00"] --> FE02
@@ -141,6 +143,7 @@ flowchart LR
 | 추가 (v0.6) | BE-12, FE-13 (FR-03 드롭 위치 직접 배치) | 프레임을 끌어 내 위치 10m 안에 놓은 캡슐이 그 자리에 보임 |
 | 추가 (v0.7) | BE-13, FE-14 (FR-03 프레임 방향 회전) | 슬라이더로 돌린 방향 그대로 다른 사용자에게도 프레임이 보임 |
 | 네이티브 N1 (v0.8) | DB-03, BE-14, BE-15, BE-16 | 주차 배치는 `12-native-plan.md` 4장 |
+| N1.5 (v0.9) | BE-17 | N1 KPI 충족 뒤. 일정은 `13-capsule-dev-plan.md` 9장 |
 
 > OPS-04는 PRD 8장 주석대로 2일 안에 못 끝나면 MVP 완료 직후 첫 작업으로 한다.
 
@@ -170,6 +173,7 @@ flowchart LR
 | BE-14 | 앱용 토큰 세션 (Bearer) | BE | BE-03 | P0 (네이티브 N1) |
 | BE-15 | 게시·주변 조회에 앵커 정보 | BE | DB-03, BE-13 | P0 (네이티브 N1) |
 | BE-16 | 열람 요청에 평면 일치 기록 | BE | DB-03, BE-09 | P0 (네이티브 N1) |
+| BE-17 | 주변 조회 응답에 `opened` | BE | BE-15 | P0 (N1.5) |
 | FE-00 | 스타일 가이드 작성 | FE(문서) | — | P0 |
 | FE-01 | 프론트 골격·API 클라이언트·스토어·화면 전환 | FE | OPS-01, BE-03 | P0 |
 | FE-02 | 로그인·회원가입 화면 | FE | FE-00, FE-01, BE-03 | P0 |
@@ -566,6 +570,23 @@ flowchart LR
 - **선행 Task:** DB-03, BE-09
 - **관련 ID:** 네이티브 PRD FR-N08·NQ-06, 도메인 5.4, ERD 1.6
 
+#### BE-17 주변 조회 응답에 `opened`
+
+- **목표:** 앱이 이미 연 캡슐을 열린 모습으로 바로 그릴 수 있게, `GET /api/capsules/nearby` 응답에 세션 유저의 열람 기록 존재 여부를 담는다.
+- **수행 작업**
+  - `src/repositories/capsules.js`(주변 조회): SELECT 목록에 `EXISTS (SELECT 1 FROM view_records v WHERE v.capsule_id = capsules.id AND v.user_id = <세션 유저 파라미터>) AS opened`를 더한다. 세션 유저 파라미터는 `is_mine` 계산에 쓰는 것을 그대로 쓴다. JOIN으로 붙이지 않는다(열람 기록에 UNIQUE가 없어 캡슐이 중복된다).
+  - `src/services/capsules.js`: 응답 항목에 `opened`(boolean)를 더한다.
+  - DB 변경과 인덱스 추가는 없다(기존 `idx_view_records_capsule_id_user_id` 사용, ERD 1.4·E12).
+  - `test/integration/nearby.test.js`: 응답 키를 정확히 비교하는 검사의 기대값에 `opened`를 더한다.
+- **완료 조건**
+  - [ ] FR-C05 열람 기록이 있는 캡슐은 `opened: true`, 없는 캡슐은 `false`다
+  - [ ] 같은 캡슐을 두 번 연 뒤에도 주변 조회 목록에 그 캡슐이 한 번만 나온다
+  - [ ] 다른 유저의 열람 기록은 내 `opened`에 영향을 주지 않는다
+  - [ ] 내 캡슐이지만 연 적이 없으면 `is_mine: true`, `opened: false`다
+  - [ ] `npm test` 전체 통과, 라인 커버리지 90% 이상
+- **선행 Task:** BE-15
+- **관련 ID:** `13-capsule-dev-plan.md` FR-C05·8장·CQ-04, FR-08, NFR-01, ERD 1.4·E12
+
 ### 6.3 프론트엔드
 
 > UI를 그리는 FE Task는 FE-00의 `docs/9-style-guide.md`를 적용한다(develop-frontend SKILL, 8장 #5).
@@ -933,3 +954,4 @@ v0.1의 확인 필요 9건을 아래와 같이 결정했다.
 | 10 | 드롭 위치 직접 배치 (v0.6) | 프레임을 끌어 앵커를 정하고 드롭하는 사람 위치에서 PRM-20(10m) 안으로 제한, 서버가 `user_lat`·`user_lng`로 검증. 사용자 좌표는 저장하지 않아 DB·ERD 변경 없음 | BE-12, FE-13, PRD FR-03·Q-13, 도메인 OQ-34 |
 | 11 | 프레임 방향 회전 (v0.7) | 사진을 먼저 고르고 W-13에서 위치와 함께 슬라이더로 0~359° 회전. 기존 `heading` 컬럼을 프레임 방향으로 쓰고 주변 조회 응답에 담는다. DB 변경 없음 | BE-13, FE-14, PRD FR-03·FR-08·Q-14, 도메인 OQ-35, ERD v0.4 |
 | 12 | 네이티브 N1 백엔드 Task 위치 (v0.8) | `/develop-backend` 스킬이 이 문서를 읽으므로 DB-03, BE-14~16을 여기에 둔다. 서버는 웹 요청과 호환을 유지한다(앵커 입력은 선택, 토큰 본문 전달은 `X-Client: app`일 때만) | DB-03, BE-14~16, `12-native-plan.md`, 네이티브 PRD NQ-09 |
+| 13 | N1.5 백엔드 범위 (v0.9) | 주변 조회 응답에 `opened`만 더한다. 원본 기획의 마이그레이션 003(`model_kind`)과 인덱스 추가는 하지 않는다. 프라이빗·개봉 날짜·영상·상점의 백엔드 Task는 `13-capsule-dev-plan.md` 15장의 결정 뒤에 만든다 | BE-17, `13-capsule-dev-plan.md` 8장·16장, ERD E12 |

@@ -1,6 +1,6 @@
 # Drop ERD
 
-> 출처: `1-domain-definition.md`(도메인 정의서 v1.1), `2-PRD.md`(PRD v1.2), `3-user-scenario.md`(시나리오 v0.6), `4-wireframes.md`(와이어프레임 v0.7), `5-project-principle.md`(프로젝트 원칙 v0.7), `6-arch-diagram.md`(아키텍처 v0.6), `10-native-PRD.md`(네이티브 PRD v0.6, 1.6만). 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
+> 출처: `1-domain-definition.md`(도메인 정의서 v1.1), `2-PRD.md`(PRD v1.2), `3-user-scenario.md`(시나리오 v0.6), `4-wireframes.md`(와이어프레임 v0.7), `5-project-principle.md`(프로젝트 원칙 v0.7), `6-arch-diagram.md`(아키텍처 v0.6), `10-native-PRD.md`(네이티브 PRD v0.7, 1.6만). 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(PRD 4.1) ID로만 참조한다.
 
 ## 변경 이력
 
@@ -10,6 +10,7 @@
 | 0.2 | 2026-10-01 | Claude Code | 확인 필요 8건 결정 반영: 잠금 컬럼 삭제(메모리 카운터), 증명 ID 컬럼 삭제, `users.terms_version` 추가, 운영용 테이블 `schema_migrations`, 로그인 성공 시 만료 세션 삭제, 3장을 결정 내역으로 변경 |
 | 0.3 | 2026-10-01 | Claude Code | 문서 정합성 점검: 출처 문서 버전을 최신(도메인 v0.8, PRD v0.8, 시나리오 v0.4, 와이어프레임 v0.4, 원칙 v0.4, 아키텍처 v0.3)으로 갱신 |
 | 0.4 | 2026-10-02 | Claude Code | 프레임 방향 회전(PRD v1.2 Q-14): `capsules.heading`의 의미를 드롭 시 기기 방향에서 프레임 앞면이 바라보는 방위로 변경. 타입·제약·DDL은 그대로 |
+| 0.6 | 2026-10-04 | Claude Code | 캡슐 디벨롭 기획(`13-capsule-dev-plan.md`) 대조: 1.4 인덱스가 주변 조회의 `opened` 계산(BE-17)에도 쓰임을 명시, 결정 E12(N1.5는 DB 변경 없음, `model_kind` 미도입). 2부의 프라이빗·개봉 날짜·영상·상점 스키마는 결정 전이라 반영하지 않는다 |
 | 0.5 | 2026-10-03 | Claude Code | 네이티브 N1(네이티브 PRD v0.3): 1.6 추가. `capsules.cloud_anchor_id`·`geo_pose`, `view_records.plane_match`와 마이그레이션 `002` DDL, 결정 E9~E11. `schema.sql`은 `001`의 원본이라 바꾸지 않는다 |
 
 ---
@@ -147,7 +148,7 @@ erDiagram
 - INV-06의 deviceId·rewarded는 MVP 범위 밖(기기 식별 불가 Q-01, 조회 보상 후속)이라 두지 않는다. 현장 증명 ID 컬럼도 두지 않고 현장 증명을 도입할 때 추가한다(P-02, Q-11, 3장 E2). IP는 원문 대신 `ip_hash`만 저장한다.
 - CHECK: `lat BETWEEN -90 AND 90`, `lng BETWEEN -180 AND 180`, `accuracy >= 0`.
 - 인덱스:
-  - `idx_view_records_capsule_id_user_id` (capsule_id, user_id): 원본 미디어 권한 확인 "이 뷰어의 해당 캡슐 열람 기록 존재"(FR-10, NFR-08, 원칙 5.2). `capsule_id` FK 조회도 이 인덱스로 처리한다.
+  - `idx_view_records_capsule_id_user_id` (capsule_id, user_id): 원본 미디어 권한 확인 "이 뷰어의 해당 캡슐 열람 기록 존재"(FR-10, NFR-08, 원칙 5.2). `capsule_id` FK 조회도 이 인덱스로 처리한다. 주변 조회 응답의 `opened`(세션 유저의 열람 기록 존재 여부, N1.5)도 이 인덱스로 `EXISTS` 계산한다. 같은 뷰어·캡슐 행이 여러 개일 수 있어 JOIN으로 붙이지 않는다(`8-plan.md` BE-17).
 
 ### 1.5 운영용 테이블
 
@@ -318,3 +319,4 @@ v0.1의 확인 필요 8건을 아래와 같이 결정했다.
 | E9 | Geospatial 포즈 저장 형태 (v0.5) | 컬럼 일곱 개 대신 `jsonb` 한 컬럼. 서버가 계산·조회에 쓰지 않고 앱에 그대로 돌려주는 값이다 | 1.6 |
 | E10 | `cloud_anchor_id` NULL 허용 (v0.5) | 허용한다. 웹 캡슐과의 호환(네이티브 PRD NQ-09) 때문이며, 앵커 없이는 게시하지 않는 규칙(NQ-04)은 앱이 지킨다 | 1.6, 네이티브 PRD FR-N06 |
 | E11 | `schema.sql` (v0.5) | 바꾸지 않는다. `001_init.sql`과 바이트 단위로 같아야 하는 테스트가 있다. `002`의 원본은 1.6이다 | 1.6, `8-plan.md` DB-03 |
+| E12 | N1.5(3D 캡슐 연출)의 스키마 (v0.6) | 변경 없음. 원본 기획의 `capsules.model_kind`는 값이 하나뿐이라 넣지 않고(P-02), 사용자가 모델을 고르는 상점 단계에서 CHECK와 함께 추가한다. `opened`는 저장하지 않고 조회 때 계산한다 | 1.4, `13-capsule-dev-plan.md` 8장·CQ-05 |

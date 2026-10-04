@@ -1,12 +1,13 @@
 # Drop 네이티브 실행 계획 (N1)
 
-> 출처: `10-native-PRD.md`(네이티브 PRD v0.6), `11-native-wireframes.md`(네이티브 와이어프레임 v0.1), `7-erd.md`(ERD v0.5), `8-plan.md`(실행 계획 v0.8), `5-project-principle.md`(프로젝트 원칙 v0.7), `9-style-guide.md`(스타일 가이드 v0.2). 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(`2-PRD.md` 4.1)·NP-xx(네이티브 PRD 4.1) ID로만 참조한다.
+> 출처: `10-native-PRD.md`(네이티브 PRD v0.7), `11-native-wireframes.md`(네이티브 와이어프레임 v0.1), `7-erd.md`(ERD v0.6), `8-plan.md`(실행 계획 v0.9), `5-project-principle.md`(프로젝트 원칙 v0.7), `9-style-guide.md`(스타일 가이드 v0.2). 수치는 PRM-xx(도메인 정의서 5.3)·M-xx(`2-PRD.md` 4.1)·NP-xx(네이티브 PRD 4.1) ID로만 참조한다.
 
 ## 1. 변경 이력
 
 | 버전 | 일자 | 변경자 | 변경내용 |
 |---|---|---|---|
 | 0.1 | 2026-10-03 | Claude Code | 초안 작성 |
+| 0.5 | 2026-10-04 | Claude Code | 7장에 N1.5(3D 캡슐 연출)와 캡슐 확장 로드맵 문서(`13-capsule-dev-plan.md`) 연결. N1 Task는 바뀌지 않는다 |
 | 0.4 | 2026-10-03 | Claude Code | OPS-N01 일부와 OPS-N04 실증 결과 기록(Galaxy S25 Ultra): 키 없는 인증으로 보관 30일 저장·삭제 후 재설치 인식 성공, VPS 사용 가능, 액자 반복 생성·삭제 통과. 24시간 뒤 인식과 벽 배치는 남음 |
 | 0.3 | 2026-10-03 | Claude Code | 패키지 이름 `com.hyunboee.drop` 확정, 1주차 완료 기준에서 VPS 실측 제거(OPS-N04로 통일) |
 | 0.2 | 2026-10-03 | Claude Code | 네이티브 PRD v0.4 반영: 앱 기술을 Unity에서 Kotlin + ARCore SDK + SceneView로 변경. 2.4 앱 구조, OPS-N02(Android 명령줄 개발 환경), OPS-N04(키 없는 인증·그리기 실증) 추가, APP Task의 구현 방식과 테스트 표현(JVM 단위 테스트), 결정 #3·#4·#6 |
@@ -421,6 +422,8 @@ DB-03, BE-14, BE-15, BE-16의 상세와 완료 조건은 `8-plan.md` 6.1·6.2에
 ## 7. 후속 단계 (계획 제외)
 
 네이티브 PRD 3.2와 9.3의 N2 이후 항목(신고·차단·약관 동의, 스토어 비공개 테스트, iOS, 결제, 등급, 보상·정산, 프라이빗, 지도 탭, 영상)은 Task를 만들지 않는다.
+
+N1 다음 단계인 N1.5(3D 캡슐 연출)의 요구사항과 일정은 `13-capsule-dev-plan.md` 1부에 있고, 백엔드 Task는 `8-plan.md` BE-17이다. 앱 Task는 N1 KPI(OPS-N03)를 충족한 뒤 이 문서에 추가한다. 같은 문서 2부(프라이빗 캡슐, 열리는 날짜, 음성·영상, 꾸미기 상점)는 결정 항목이 남아 있어 Task를 만들지 않는다.
 
 ---
 

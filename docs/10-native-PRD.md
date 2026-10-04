@@ -2,13 +2,14 @@
 
 > 웹 MVP(`2-PRD.md` v1.2)를 Android 네이티브 앱(Kotlin + ARCore SDK)으로 옮기는 첫 단계(N1)의 요구사항이다. 도메인 규칙의 원본은 `1-domain-definition.md`(도메인 정의서 v1.1)이며, 이 문서는 BR·PRM·INV·PRV ID로 참조만 한다. 웹 MVP에서 정한 서버 규칙(FR·M·NFR)은 바뀌는 것만 적고 나머지는 `2-PRD.md`를 그대로 따른다. `2-PRD.md` FR-12가 예고한 "네이티브 전환 시 별도 PRD"가 이 문서다.
 >
-> 문서 상태: **확정 (v0.6)**. 9장의 NQ 항목을 기본안대로 확정했다. 화면은 `11-native-wireframes.md`, 실행 계획은 `12-native-plan.md`(백엔드 Task는 `8-plan.md`), DB 변경은 `7-erd.md` 1.6에 있다. 외부 서비스 조건은 2026-10-03에 공식 문서로 검증했고 근거는 10장에 있다. 공식 문서로 확인되지 않은 항목은 "미확인"으로 표시하고 대안을 적었다.
+> 문서 상태: **확정 (v0.7)**. 9장의 NQ 항목을 기본안대로 확정했다. 화면은 `11-native-wireframes.md`, 실행 계획은 `12-native-plan.md`(백엔드 Task는 `8-plan.md`), DB 변경은 `7-erd.md` 1.6에 있다. 외부 서비스 조건은 2026-10-03에 공식 문서로 검증했고 근거는 10장에 있다. 공식 문서로 확인되지 않은 항목은 "미확인"으로 표시하고 대안을 적었다.
 
 ## 변경 이력
 
 | 버전 | 일자 | 변경자 | 변경내용 |
 |---|---|---|---|
 | 0.1 | 2026-10-03 | Claude Code | 초안 작성 |
+| 0.7 | 2026-10-04 | Claude Code | 캡슐 디벨롭 기획(`13-capsule-dev-plan.md`) 반영: 9.3에 N1.5(3D 캡슐 연출)와 캡슐 확장 로드맵 연결, 6장 SceneView 사용 범위에 N1.5 예고, 6.1에 주변 조회 `opened`(BE-17, N1.5) 안내. N1 요구사항은 바뀌지 않는다 |
 | 0.6 | 2026-10-03 | Claude Code | 실증(OPS-N04) 결과 반영: 키 없는 인증으로 보관 30일 저장과 재설치 뒤 인식 성공, 국내 테스트 장소에서 VPS 사용 가능, SceneView 사진 액자 동작(V-04·V-12, RISK-N02·N10, 10.1). 24시간 뒤 인식과 벽 배치는 미확인으로 남김 |
 | 0.5 | 2026-10-03 | Claude Code | 문서 정합성 점검: 패키지 이름 `com.hyunboee.drop` 확정(6장), VPS 실측·실증 시점을 실행 계획과 같게 0주차(OPS-N04)로 통일(8장, RISK-N02, 10.1), FR-N03에 벽면 배치 규칙 추가(와이어프레임 NW-09와 일치), 검증 근거 출처를 Android용 공식 문서 주소로 변경 |
 | 0.4 | 2026-10-03 | Claude Code | 앱 기술을 Unity에서 Kotlin + ARCore SDK + SceneView로 변경(NQ-01). 근거: 코드·화면·빌드가 모두 텍스트와 명령줄로 다뤄져 개발 방식에 맞고, 설치·메모리 부담이 작으며, N1은 Android만이다. 6장 기술 제약, NFR-N01·N02, FR-N04(시스템 사진 선택기, 권한 불필요), NQ-08·NQ-10, RISK-N03(라이브러리 안정성), RISK-N10(키 없는 인증 실증) 추가, V-06·V-10·V-11 갱신, V-12·V-13 추가. 요구사항·화면·파라미터·백엔드 변경은 그대로 |
@@ -145,7 +146,7 @@
 |---|---|
 | 앱 | Kotlin, Android(minSdk 24, targetSdk 36, compileSdk 37). 화면은 Jetpack Compose. 패키지 이름 `com.hyunboee.drop` |
 | AR | ARCore SDK 1.56.0(`com.google.ar:core`). 클라우드 앵커와 Geospatial은 ARCore `Session`의 원본 API를 직접 호출한다 |
-| 3D 그리기 | SceneView(`io.github.sceneview:arsceneview` 4.52.0, Apache-2.0). 버전을 고정하고 자동으로 올리지 않는다. 사진 액자·글자·탭·끌기에만 쓴다(RISK-N03) |
+| 3D 그리기 | SceneView(`io.github.sceneview:arsceneview` 4.52.0, Apache-2.0). 버전을 고정하고 자동으로 올리지 않는다. 사진 액자·글자·탭·끌기에만 쓴다(RISK-N03). N1.5에서 GLB 모델·애니메이션까지 넓히며, 그 전에 실기기 실증을 거친다(`13-capsule-dev-plan.md` 7장, RISK-C02) |
 | 갤러리 접근 | Android 시스템 사진 선택기(`PickVisualMedia`, AndroidX 기본). 별도 플러그인 없음(NQ-08) |
 | 서버 통신 | `HttpURLConnection`과 `org.json`(Android 기본 제공), 비동기는 Kotlin 코루틴 |
 | 위치 | Google Play 서비스 위치(`play-services-location`). Geospatial에도 필요하다 |
@@ -231,11 +232,14 @@
 
 | 단계 | 내용 |
 |---|---|
+| N1.5 | 3D 캡슐 연출: 캡슐을 사진 액자 대신 3D 모델로 보여 주고 대기·접근·개봉 연출을 넣는다. DB 변경은 없고 주변 조회 응답에 `opened`만 더한다(`8-plan.md` BE-17). 요구사항은 `13-capsule-dev-plan.md` 1부. 착수 조건은 1.3 KPI 충족 |
 | N2 | 신고(콘텐츠·앵커 위치)·사용자 차단·약관 동의 → 스토어 비공개 테스트(12명·14일) → 공개 출시, 정밀 위치 선언. iOS 앱(Swift + ARKit + ARCore iOS SDK로 따로 만든다. Mac과 토큰 서명 서버가 필요하다) |
 | N3 | 인앱결제, 실버·마스터(앵커 기간 연장 배치와 재저장, NQ-05), 유료 체크포인트, 현장 증명 전체 판정(5.4), 기기 식별·무결성 |
 | N4 | 크리스탈·보상·정산, 프라이빗·초대·지오펜싱, 지도 탭, 영상 |
 
 단계 구분은 이 문서의 제안이며, 각 단계는 별도 PRD로 상세화한다.
+
+`13-capsule-dev-plan.md` 2부는 N1.5 뒤의 순서를 프라이빗 캡슐 → 열리는 날짜 → 음성·영상 → 꾸미기 상점으로 바꾸는 안을 담고 있다(위 표의 N4에서 프라이빗·영상을 앞당긴다). 이 순서와 도메인 규칙과의 충돌은 그 문서 15장의 결정 항목(DQ-01~09)이 정해진 뒤 이 표에 반영한다. 어느 순서든 초대받은 외부인에게 앱을 배포하기 전에는 N2가, 실결제를 받기 전에는 N3가 먼저다.
 
 ---
 
