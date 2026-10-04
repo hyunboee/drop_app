@@ -155,3 +155,9 @@ app/local.properties
 *.aab
 *.jks
 *.keystore
+
+# 개발용 도구(터널 실행 파일)
+.tools/
+
+# 나눠 줄 설치 파일
+share/
