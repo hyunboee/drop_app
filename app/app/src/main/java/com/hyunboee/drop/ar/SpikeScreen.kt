@@ -89,12 +89,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size as UiSize
 import androidx.compose.ui.graphics.Color as UiColor
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -286,11 +282,6 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
     LaunchedEffect(target) { panelOpen = false }
     var guiding by remember { mutableStateOf(navTarget) } // AR 길찾기 목표 (끝내면 null)
     var torch by remember { mutableStateOf(false) } // 어두운 곳에서 바닥 인식을 돕는 플래시
-    // 손이 사진을 통과하는 부분이 빛나는 효과: 깊이 영상으로 "사진 면과 거의 같은 거리에 있는 실제 물체" 자리를 찾아 그 자리만 빛낸다
-    var glow by remember { mutableStateOf<List<GlowQuad>>(emptyList()) }
-    val glowTargets = remember { arrayOfNulls<List<Capsule>>(1) }
-    val lastGlowAt = remember { LongArray(1) }
-    SideEffect { glowTargets[0] = all }
     // 두 손가락 벌리기·오므리기 = 카메라 화면 확대·축소 (디지털 줌: 카메라 영상과 캡슐을 함께 키운다. 저장되는 값이 아니다)
     var zoom by remember { mutableFloatStateOf(1f) }
     LaunchedEffect(zoom) {
@@ -537,13 +528,6 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
             onSessionFailed = { e -> log("SESSION_FAILED ${e.javaClass.simpleName}: ${e.message}") },
             onSessionUpdated = { s, f ->
                 frameHolder[0] = f
-                val nowMs = System.currentTimeMillis()
-                if (nowMs - lastGlowAt[0] > GLOW_INTERVAL_MS && f.camera.trackingState == TrackingState.TRACKING) {
-                    lastGlowAt[0] = nowMs
-                    val near = glowTargets[0]?.filter { !it.closed && it.dist < GLOW_RANGE_M }.orEmpty()
-                    val next = if (near.isEmpty()) emptyList() else computeGlow(f, near, view.width.toFloat(), view.height.toFloat())
-                    if (next.isNotEmpty() || glow.isNotEmpty()) glow = next
-                }
                 val turn = navTurn[0]
                 // AR로 목표 캡슐의 자리를 이미 찾았으면 GPS·나침반 대신 AR이 아는 정확한 위치를 가리킨다
                 val target = navAnchor[0]?.takeIf { it.anchor.trackingState == TrackingState.TRACKING }
@@ -911,34 +895,6 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
             )
         }
 
-        // 손이 사진을 통과하는 자리의 빛. 확대(zoom) 중이면 화면 가운데를 기준으로 같은 비율로 옮긴다. 터치는 가로채지 않는다
-        Canvas(Modifier.fillMaxSize()) {
-            val cx = size.width / 2f
-            val cy = size.height / 2f
-            for (q in glow) {
-                val path = Path().apply {
-                    for (i in 0 until 4) {
-                        val x = cx + (q.poly[i * 2] - cx) * zoom
-                        val y = cy + (q.poly[i * 2 + 1] - cy) * zoom
-                        if (i == 0) moveTo(x, y) else lineTo(x, y)
-                    }
-                    close()
-                }
-                clipPath(path) {
-                    val r = 70f * zoom
-                    for (sp in q.spots) {
-                        val c = Offset(cx + (sp[0] - cx) * zoom, cy + (sp[1] - cy) * zoom)
-                        drawCircle(
-                            brush = Brush.radialGradient(listOf(UiColor(0xFFFFE9A8).copy(alpha = 0.85f * sp[2]), UiColor(0xFFFFB84D).copy(alpha = 0.35f * sp[2]), UiColor.Transparent), center = c, radius = r),
-                            radius = r,
-                            center = c,
-                            blendMode = BlendMode.Plus,
-                        )
-                    }
-                }
-            }
-        }
-
         // 위: 홈으로 돌아가기 + 상태. 상태 표시줄·카메라 구멍과 겹치지 않게 안쪽으로 넣는다
         Column(
             Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -1148,139 +1104,6 @@ private fun CompactSlider(label: String, value: Float, range: ClosedFloatingPoin
         Text(label, color = Tokens.HomeSub, fontSize = 11.sp, modifier = Modifier.width(84.dp))
         Slider(value = value, onValueChange = onChange, valueRange = range, colors = colors, modifier = Modifier.weight(1f).height(30.dp))
     }
-}
-
-// 사진 면(네 모서리의 화면 좌표 poly)과 그 안에서 실제 물체가 면 가까이에 있는 자리들(x, y, 세기 0~1)
-private class GlowQuad(val poly: FloatArray, val spots: List<FloatArray>)
-
-private const val GLOW_INTERVAL_MS = 100L
-private const val GLOW_RANGE_M = 4f // 이 거리 안의 캡슐만 계산한다
-private const val GLOW_TOLERANCE_M = 0.06f // 사진 면에서 이 거리 안에 실제 물체가 있으면 "통과 중"
-private const val GLOW_GRID_PX = 22f // 화면에서 이 간격으로 깊이를 살펴본다
-
-// ARCore 깊이 영상(DEPTH16, 밀리미터)에서, 사진 면과 거의 같은 거리에 있는 점을 찾는다.
-// 면의 거리는 네 모서리의 카메라 기준 깊이로 1/z가 화면 좌표에 대해 직선이 되는 성질로 구한다(원근 보정).
-private fun computeGlow(frame: Frame, caps: List<Capsule>, vw: Float, vh: Float): List<GlowQuad> {
-    val depth = try {
-        frame.acquireDepthImage16Bits()
-    } catch (e: Exception) {
-        return emptyList() // 아직 깊이가 없거나 이 기기에서 쓸 수 없다
-    }
-    try {
-        val dw = depth.width
-        val dh = depth.height
-        val plane = depth.planes[0]
-        val buf = plane.buffer.order(java.nio.ByteOrder.nativeOrder())
-        val rowStride = plane.rowStride
-        val viewM = FloatArray(16)
-        val projM = FloatArray(16)
-        val vp = FloatArray(16)
-        frame.camera.getViewMatrix(viewM, 0)
-        frame.camera.getProjectionMatrix(projM, 0, 0.05f, 100f)
-        android.opengl.Matrix.multiplyMM(vp, 0, projM, 0, viewM, 0)
-
-        val result = ArrayList<GlowQuad>()
-        for (c in caps) {
-            val bw = c.bitmap.width.toFloat()
-            val bh = c.bitmap.height.toFloat()
-            val w = c.sizeM * bw / maxOf(bw, bh)
-            val h = c.sizeM * bh / maxOf(bw, bh)
-            // 사진 가운데 높이: 브론즈는 바로, 열린 상자(실버)는 상자 위로 올라온 자리
-            val centerY = if (c.grade == BRONZE) h / 2f else 0.463f + h / 2f
-            val th = Math.toRadians(c.rotDeg.toDouble())
-            val cosT = Math.cos(th).toFloat()
-            val sinT = Math.sin(th).toFloat()
-            val poly = FloatArray(8)
-            val zc = FloatArray(4)
-            var ok = true
-            for ((i, sg) in listOf(-1f to -1f, 1f to -1f, 1f to 1f, -1f to 1f).withIndex()) {
-                val lx = sg.first * w / 2f
-                val ly = centerY + sg.second * h / 2f
-                val p = c.anchor.pose.transformPoint(floatArrayOf(lx * cosT, ly, -lx * sinT))
-                val q = FloatArray(4)
-                android.opengl.Matrix.multiplyMV(q, 0, vp, 0, floatArrayOf(p[0], p[1], p[2], 1f), 0)
-                if (q[3] <= 0.05f) {
-                    ok = false
-                    break
-                }
-                poly[i * 2] = (q[0] / q[3] * 0.5f + 0.5f) * vw
-                poly[i * 2 + 1] = (1f - (q[1] / q[3] * 0.5f + 0.5f)) * vh
-                val v = FloatArray(4)
-                android.opengl.Matrix.multiplyMV(v, 0, viewM, 0, floatArrayOf(p[0], p[1], p[2], 1f), 0)
-                zc[i] = -v[2]
-                if (zc[i] <= 0.05f) {
-                    ok = false
-                    break
-                }
-            }
-            if (!ok) continue
-
-            // 1/z = a*x + b*y + k 를 세 모서리로 푼다
-            val x0 = poly[0]; val y0 = poly[1]; val z0 = 1f / zc[0]
-            val x1 = poly[2]; val y1 = poly[3]; val z1 = 1f / zc[1]
-            val x2 = poly[4]; val y2 = poly[5]; val z2 = 1f / zc[2]
-            val det = x0 * (y1 - y2) - y0 * (x1 - x2) + (x1 * y2 - x2 * y1)
-            if (kotlin.math.abs(det) < 1e-3f) continue
-            val a = (z0 * (y1 - y2) - y0 * (z1 - z2) + (z1 * y2 - z2 * y1)) / det
-            val b = (x0 * (z1 - z2) - z0 * (x1 - x2) + (x1 * z2 - x2 * z1)) / det
-            val k = z0 - a * x0 - b * y0
-
-            // 사각형 안의 격자점
-            val minX = maxOf(0f, minOf(poly[0], poly[2], poly[4], poly[6]))
-            val maxX = minOf(vw, maxOf(poly[0], poly[2], poly[4], poly[6]))
-            val minY = maxOf(0f, minOf(poly[1], poly[3], poly[5], poly[7]))
-            val maxY = minOf(vh, maxOf(poly[1], poly[3], poly[5], poly[7]))
-            val pts = ArrayList<Float>()
-            val planeZ = ArrayList<Float>()
-            var gx = minX
-            while (gx <= maxX) {
-                var gy = minY
-                while (gy <= maxY) {
-                    if (insideQuad(poly, gx, gy)) {
-                        val inv = a * gx + b * gy + k
-                        if (inv > 0f) {
-                            pts.add(gx)
-                            pts.add(gy)
-                            planeZ.add(1f / inv)
-                        }
-                    }
-                    gy += GLOW_GRID_PX
-                }
-                gx += GLOW_GRID_PX
-            }
-            if (planeZ.isEmpty()) continue
-            val view = pts.toFloatArray()
-            val img = FloatArray(view.size)
-            frame.transformCoordinates2d(com.google.ar.core.Coordinates2d.VIEW, view, com.google.ar.core.Coordinates2d.IMAGE_NORMALIZED, img)
-            val spots = ArrayList<FloatArray>()
-            for (i in planeZ.indices) {
-                val px = (img[i * 2] * dw).toInt().coerceIn(0, dw - 1)
-                val py = (img[i * 2 + 1] * dh).toInt().coerceIn(0, dh - 1)
-                val raw = buf.getShort(py * rowStride + px * 2).toInt() and 0x1FFF
-                if (raw == 0) continue
-                val d = raw / 1000f
-                val diff = kotlin.math.abs(d - planeZ[i])
-                if (diff < GLOW_TOLERANCE_M) spots.add(floatArrayOf(view[i * 2], view[i * 2 + 1], 1f - diff / GLOW_TOLERANCE_M))
-            }
-            if (spots.isNotEmpty()) result.add(GlowQuad(poly, spots))
-        }
-        return result
-    } finally {
-        depth.close()
-    }
-}
-
-// 볼록 사각형(꼭짓점 4개) 안에 점이 있는지: 모든 변에서 같은 쪽에 있으면 안이다
-private fun insideQuad(poly: FloatArray, x: Float, y: Float): Boolean {
-    var pos = 0
-    var neg = 0
-    for (i in 0 until 4) {
-        val ax = poly[i * 2]; val ay = poly[i * 2 + 1]
-        val bx = poly[((i + 1) % 4) * 2]; val by = poly[((i + 1) % 4) * 2 + 1]
-        val cross = (bx - ax) * (y - ay) - (by - ay) * (x - ax)
-        if (cross > 0) pos++ else if (cross < 0) neg++
-    }
-    return pos == 0 || neg == 0
 }
 
 private enum class SaveKind { SAVING, DONE, FAILED }
