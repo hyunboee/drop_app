@@ -9,6 +9,8 @@ arcore = "1.56.0"
 sceneview = "4.52.0"
 playServicesAuth = "22.0.0"
 junit = "4.13.2"
+json = "20240303"
+osmdroid = "6.1.20"
 
 [libraries]
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
@@ -18,6 +20,8 @@ activity-compose = { module = "androidx.activity:activity-compose", version.ref 
 arcore = { module = "com.google.ar:core", version.ref = "arcore" }
 sceneview-ar = { module = "io.github.sceneview:arsceneview", version.ref = "sceneview" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
+json = { module = "org.json:json", version.ref = "json" }
+osmdroid = { module = "org.osmdroid:osmdroid-android", version.ref = "osmdroid" }
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]
