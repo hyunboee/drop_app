@@ -230,10 +230,19 @@ test('BE-06 본문이 객체가 아니면 400 VALIDATION_FAILED', async (t) => {
   assertError(await request(url, '/api/capsules', { method: 'POST', cookie: user.cookie }), 400, 'VALIDATION_FAILED');
 });
 
-test('BE-06 grade: SILVER는 400 GRADE_NOT_ALLOWED', async (t) => {
+test('실험: grade SILVER는 201이고 유효 기간이 365일이다', async (t) => {
+  const { url } = await start(t);
+  const user = await loggedIn();
+  const body = capsuleBody({ grade: 'SILVER' });
+  assert.equal((await publish(url, user.cookie, body)).status, 201);
+  const { rows } = await pool.query("SELECT grade, expires_at - published_at = interval '365 days' AS ok FROM capsules WHERE media_id = $1", [body.media_id]);
+  assert.deepEqual(rows[0], { grade: 'SILVER', ok: true });
+});
+
+test('BE-06 grade: MASTER 같은 그 밖의 등급은 400 GRADE_NOT_ALLOWED', async (t) => {
   const { url, storage } = await start(t);
   const user = await loggedIn();
-  assertError(await publish(url, user.cookie, capsuleBody({ grade: 'SILVER' })), 400, 'GRADE_NOT_ALLOWED');
+  assertError(await publish(url, user.cookie, capsuleBody({ grade: 'MASTER' })), 400, 'GRADE_NOT_ALLOWED');
   assert.equal(await count(), 0);
   assert.equal(storage.headObject.mock.callCount(), 0);
 });
@@ -382,4 +391,48 @@ test('BE-06 비로그인 401 AUTH_REQUIRED', async (t) => {
   assertError(await publish(url, undefined, capsuleBody()), 401, 'AUTH_REQUIRED');
   assert.equal(storage.headObject.mock.callCount(), 0);
   assert.equal(await count(), 0);
+});
+
+// ---------- BE-15·BE-18 앵커 ID·크기 ----------
+
+test('BE-15·BE-18 cloud_anchor_id와 size_m을 저장하고 주변 조회에 돌려준다', async (t) => {
+  const { url } = await start(t);
+  const user = await loggedIn();
+  const body = capsuleBody({ cloud_anchor_id: 'ua-abc_123-DEF', size_m: 1.2 });
+  assert.equal((await publish(url, user.cookie, body)).status, 201);
+  const { rows } = await pool.query('SELECT cloud_anchor_id, size_m FROM capsules WHERE media_id = $1', [body.media_id]);
+  assert.deepEqual(rows[0], { cloud_anchor_id: 'ua-abc_123-DEF', size_m: 1.2 });
+  const res = await request(url, `/api/capsules/nearby?lat=${body.lat}&lng=${body.lng}`, { cookie: user.cookie });
+  assert.equal(res.body.capsules[0].cloud_anchor_id, 'ua-abc_123-DEF');
+  assert.equal(res.body.capsules[0].size_m, 1.2);
+});
+
+test('BE-15·BE-18 앵커 ID와 크기를 생략하면(웹) NULL과 기본값 0.4로 저장된다', async (t) => {
+  const { url } = await start(t);
+  const user = await loggedIn();
+  const body = capsuleBody();
+  assert.equal((await publish(url, user.cookie, body)).status, 201);
+  const { rows } = await pool.query('SELECT cloud_anchor_id, size_m FROM capsules WHERE media_id = $1', [body.media_id]);
+  assert.deepEqual(rows[0], { cloud_anchor_id: null, size_m: 0.4 });
+});
+
+test('BE-15·BE-18 잘못된 cloud_anchor_id·size_m은 400 VALIDATION_FAILED이고 캡슐이 만들어지지 않는다', async (t) => {
+  const { url } = await start(t);
+  const user = await loggedIn();
+  for (const over of [
+    { cloud_anchor_id: '' },
+    { cloud_anchor_id: 'a'.repeat(129) },
+    { cloud_anchor_id: 'bad id!' },
+    { cloud_anchor_id: 5 },
+    { size_m: 0.05 },
+    { size_m: 2.5 },
+    { size_m: 'big' },
+    { size_m: null },
+  ]) {
+    const res = await publish(url, user.cookie, capsuleBody(over));
+    assert.equal(res.status, 400, JSON.stringify(over));
+    assert.equal(res.body.error.code, 'VALIDATION_FAILED');
+  }
+  const { rows } = await pool.query('SELECT count(*)::int AS n FROM capsules');
+  assert.equal(rows[0].n, 0);
 });

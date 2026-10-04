@@ -447,3 +447,98 @@ test('BE-03 PRD 8장 1일차 오전: 로그인 후 세션 쿠키로 보호 API �
   assert.equal(res.status, 200);
   assert.deepEqual(res.body, { id: user.id, email: user.email });
 });
+
+// ---------- BE-14 앱용 토큰 세션 (Bearer) ----------
+
+const APP = { 'X-Client': 'app' };
+const bearer = (token) => ({ Authorization: `Bearer ${token}` });
+
+test('BE-14 FR-N01 X-Client: app으로 가입·로그인하면 본문에 token이 있고 Set-Cookie가 없다', async (t) => {
+  const { url } = await start(t);
+  const body = signupBody();
+  const signedUp = await request(url, '/api/auth/signup', { method: 'POST', body, headers: APP });
+  assert.equal(signedUp.status, 201);
+  assert.deepEqual(Object.keys(signedUp.body).sort(), ['email', 'id', 'token']);
+  assert.equal(sidCookie(signedUp), null);
+  assert.equal(await count('SELECT count(*) FROM sessions WHERE token_hash = $1', [sha256(signedUp.body.token)]), 1);
+
+  const loggedIn = await request(url, '/api/auth/login', {
+    method: 'POST',
+    body: { email: body.email, password: body.password },
+    headers: APP,
+  });
+  assert.equal(loggedIn.status, 200);
+  assert.deepEqual(Object.keys(loggedIn.body).sort(), ['email', 'id', 'token']);
+  assert.equal(sidCookie(loggedIn), null);
+});
+
+test('BE-14 X-Client 헤더가 없으면 본문에 token이 없고 쿠키가 있다 (웹 동작 유지)', async (t) => {
+  const { url } = await start(t);
+  const body = signupBody();
+  const signedUp = await signup(url, body);
+  assert.deepEqual(Object.keys(signedUp.body).sort(), ['email', 'id']);
+  assertSessionCookie(signedUp);
+  const loggedIn = await login(url, body.email, body.password);
+  assert.deepEqual(Object.keys(loggedIn.body).sort(), ['email', 'id']);
+  assertSessionCookie(loggedIn);
+});
+
+test('BE-14 본문의 token을 Authorization: Bearer로 보내면 GET /api/me가 200이다', async (t) => {
+  const { url } = await start(t);
+  const body = signupBody();
+  const signedUp = await request(url, '/api/auth/signup', { method: 'POST', body, headers: APP });
+  const res = await request(url, '/api/me', { headers: bearer(signedUp.body.token) });
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body, { id: signedUp.body.id, email: body.email });
+});
+
+test('BE-14 위조 토큰, 만료 세션, Bearer 형식이 아닌 헤더는 401 AUTH_REQUIRED', async (t) => {
+  const { url } = await start(t);
+  const user = await insertUser(pool);
+  const expired = await insertSession(pool, user.id, { expiresAt: new Date(Date.now() - 60000) });
+  const valid = await insertSession(pool, user.id);
+  assertError(await request(url, '/api/me', { headers: bearer('forged') }), 401, 'AUTH_REQUIRED');
+  assertError(await request(url, '/api/me', { headers: bearer(expired.token) }), 401, 'AUTH_REQUIRED');
+  for (const value of [valid.token, `Basic ${valid.token}`, 'Bearer', `Bearer  ${valid.token} x`]) {
+    assertError(await request(url, '/api/me', { headers: { Authorization: value } }), 401, 'AUTH_REQUIRED');
+  }
+});
+
+test('BE-14 헤더와 쿠키가 둘 다 있으면 헤더를 쓴다', async (t) => {
+  const { url } = await start(t);
+  const a = await insertUser(pool);
+  const b = await insertUser(pool);
+  const sa = await insertSession(pool, a.id);
+  const sb = await insertSession(pool, b.id);
+  const res = await request(url, '/api/me', { cookie: sa.cookie, headers: bearer(sb.token) });
+  assert.equal(res.body.id, b.id);
+  // 헤더가 잘못되면 쿠키가 유효해도 401
+  assertError(await request(url, '/api/me', { cookie: sa.cookie, headers: bearer('forged') }), 401, 'AUTH_REQUIRED');
+});
+
+test('BE-14 헤더 토큰으로 로그아웃하면 204이고 같은 토큰으로 다시 부르면 401', async (t) => {
+  const { url } = await start(t);
+  const user = await insertUser(pool);
+  const { token } = await insertSession(pool, user.id);
+  const res = await request(url, '/api/auth/logout', { method: 'POST', headers: bearer(token) });
+  assert.equal(res.status, 204);
+  assert.equal(await count('SELECT count(*) FROM sessions WHERE token_hash = $1', [sha256(token)]), 0);
+  assertError(await request(url, '/api/me', { headers: bearer(token) }), 401, 'AUTH_REQUIRED');
+});
+
+test('BE-14 NFR-N03 요청 로그에 토큰이 남지 않는다', async (t) => {
+  const log = mockLog(t);
+  const { url } = await start(t);
+  const user = await insertUser(pool);
+  const { token } = await insertSession(pool, user.id);
+  await request(url, '/api/me', { headers: bearer(token) });
+  const loggedIn = await request(url, '/api/auth/login', {
+    method: 'POST',
+    body: { email: user.email, password: user.password },
+    headers: APP,
+  });
+  await waitLog(log, (l) => l.includes('/api/auth/login'));
+  const lines = log.mock.calls.map((c) => c.arguments.join(' ')).join('\n');
+  assert.ok(!lines.includes(token));
+  assert.ok(!lines.includes(loggedIn.body.token));
+});

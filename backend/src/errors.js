@@ -4,7 +4,7 @@ export const ERRORS = {
   ACCOUNT_LOCKED: { status: 429, message: '로그인 시도가 많아 잠시 후 다시 시도해 주세요' },
   EMAIL_TAKEN: { status: 409, message: '이미 가입된 이메일이에요' },
   VALIDATION_FAILED: { status: 400, message: '입력값을 확인해 주세요' },
-  GRADE_NOT_ALLOWED: { status: 400, message: '지금은 브론즈 등급만 드롭할 수 있어요' },
+  GRADE_NOT_ALLOWED: { status: 400, message: '지금은 브론즈·실버 등급만 드롭할 수 있어요' },
   LOW_ACCURACY: { status: 422, message: '위치 정확도가 낮아요. 잠시 후 다시 시도해 주세요' },
   DROP_TOO_FAR: { status: 422, message: '내 위치에서 10m 안에만 놓을 수 있어요. 위치를 다시 정해 주세요' },
   OUT_OF_RANGE: { status: 403, message: '캡슐에 더 가까이 가야 열 수 있어요' },

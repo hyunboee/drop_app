@@ -45,7 +45,7 @@ test('DB-01 001_init.sql이 docs/schema.sql과 바이트 단위로 같다', asyn
 test('DB-01 빈 DB에 migrate 적용 후 5개 테이블과 2개 인덱스가 존재한다', async () => {
   await pool.query('DROP TABLE IF EXISTS view_records, capsules, sessions, users, schema_migrations CASCADE');
   const applied = await migrate(pool);
-  assert.deepEqual(applied, ['001_init.sql']);
+  assert.deepEqual(applied, ['001_init.sql', '002_native_anchor.sql', '003_capsule_size.sql', '004_silver_grade.sql']);
 
   for (const t of TABLES) {
     const { rows } = await pool.query('SELECT to_regclass($1) AS r', [t]);
@@ -104,7 +104,7 @@ test('DB-01 CHECK 제약 위반 INSERT는 모두 23514로 실패한다', async (
   await insert(base);
 
   const cases = {
-    "grade = 'SILVER'": { grade: 'SILVER' },
+    "grade = 'MASTER'": { grade: 'MASTER' },
     "status = 'EXPIRED'": { status: 'EXPIRED' },
     'heading = 360': { heading: 360 },
     'lat = 91': { lat: 91 },

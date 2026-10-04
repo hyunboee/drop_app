@@ -10,6 +10,14 @@ function setSessionCookie(res, token) {
   res.setHeader('Set-Cookie', `sid=${token}; ${COOKIE_ATTRS}; Max-Age=${M_04_SESSION_TTL_SEC}`);
 }
 
+// 앱(X-Client: app)에는 토큰을 본문으로 주고 쿠키를 보내지 않는다. 웹 응답에는 토큰을 싣지 않는다 (BE-14)
+function sendSession(req, res, status, user, token) {
+  const body = { id: user.id, email: user.email };
+  if (req.get('x-client') === 'app') body.token = token;
+  else setSessionCookie(res, token);
+  res.status(status).json(body);
+}
+
 function bodyOf(req) {
   const body = req.body;
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new AppError('VALIDATION_FAILED');
@@ -34,8 +42,7 @@ export function createPublicAuthRouter(deps) {
     }
     res.locals.logEmail = email;
     const { user, token } = await signup(deps, { email, password });
-    setSessionCookie(res, token);
-    res.status(201).json({ id: user.id, email: user.email });
+    sendSession(req, res, 201, user, token);
   });
 
   router.post('/login', async (req, res) => {
@@ -45,8 +52,7 @@ export function createPublicAuthRouter(deps) {
     }
     res.locals.logEmail = email;
     const { user, token } = await login(deps, { email, password });
-    setSessionCookie(res, token);
-    res.json({ id: user.id, email: user.email });
+    sendSession(req, res, 200, user, token);
   });
 
   return router;

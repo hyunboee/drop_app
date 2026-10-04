@@ -2,13 +2,16 @@ import { createHmac } from 'node:crypto';
 import { mediaKeys } from '../aws/storage.js';
 import { AppError } from '../errors.js';
 import { boundingBox, distanceM, EARTH_RADIUS_M, isLowAccuracy, judgeOpen } from '../lib/geo.js';
-import { M_01_NEARBY_RADIUS_M, M_06_PHOTO_MAX_BYTES, PRM_06_BRONZE_TTL_HOURS, PRM_20_DROP_PLACE_RADIUS_M } from '../params.js';
+import { M_01_NEARBY_RADIUS_M, M_06_PHOTO_MAX_BYTES, PRM_06_BRONZE_TTL_HOURS, PRM_06_SILVER_TTL_HOURS, PRM_20_DROP_PLACE_RADIUS_M } from '../params.js';
 import {
   findActiveCapsuleById,
   findCapsuleByMediaId,
+  findMyCapsules,
   findNearbyCapsules,
+  findOpenedCapsules,
   insertCapsule,
   markCapsuleDeleted,
+  updateCapsuleLook,
 } from '../repositories/capsules.js';
 import { insertViewRecord } from '../repositories/viewRecords.js';
 
@@ -23,7 +26,7 @@ function existingResult(existing, userId) {
 
 export async function publishCapsule(
   { pool, storage, moderation },
-  { userId, mediaId, title, grade, lat, lng, accuracy, heading, userLat, userLng },
+  { userId, mediaId, title, grade, lat, lng, accuracy, heading, userLat, userLng, cloudAnchorId, sizeM },
 ) {
   const existing = await findCapsuleByMediaId(pool, mediaId);
   if (existing) return existingResult(existing, userId);
@@ -54,7 +57,7 @@ export async function publishCapsule(
 
   try {
     const capsule = await insertCapsule(pool, {
-      userId, mediaId, title, grade, lat, lng, accuracy, heading, ttlHours: PRM_06_BRONZE_TTL_HOURS,
+      userId, mediaId, title, grade, lat, lng, accuracy, heading, cloudAnchorId, sizeM, ttlHours: grade === 'SILVER' ? PRM_06_SILVER_TTL_HOURS : PRM_06_BRONZE_TTL_HOURS,
     });
     return { created: true, capsule };
   } catch (err) {
@@ -72,8 +75,24 @@ export async function findNearby({ pool }, { userId, lat, lng }) {
     earthRadiusM: EARTH_RADIUS_M,
     userId,
   });
-  return rows.map(({ id, title, lat, lng, heading, media_id, is_mine }) => ({
-    id, title, lat, lng, heading, thumb_url: `/api/media/${media_id}/thumb`, is_mine,
+  return rows.map(({ id, title, grade, lat, lng, heading, media_id, is_mine, cloud_anchor_id, size_m }) => ({
+    id, title, grade, lat, lng, heading, thumb_url: `/api/media/${media_id}/thumb`, is_mine, cloud_anchor_id, size_m,
+  }));
+}
+
+// 홈 화면(NW-16): 내가 남긴 캡슐
+export async function listMine({ pool }, { userId }) {
+  const rows = await findMyCapsules(pool, userId);
+  return rows.map(({ id, title, grade, media_id, lat, lng, expires_at, view_count }) => ({
+    id, title, grade, thumb_url: `/api/media/${media_id}/thumb`, lat, lng, expires_at, view_count,
+  }));
+}
+
+// 보관함(NW-17): 내가 연 캡슐. 원본은 열람 기록이 있어 미디어 프록시가 내려준다
+export async function listArchive({ pool }, { userId }) {
+  const rows = await findOpenedCapsules(pool, userId);
+  return rows.map(({ id, title, media_id, opened_at }) => ({
+    id, title, thumb_url: `/api/media/${media_id}/thumb`, media_url: `/api/media/${media_id}`, opened_at,
   }));
 }
 
@@ -86,6 +105,14 @@ export async function openCapsule({ pool, ipHashSecret }, { userId, capsuleId, l
   if (!allowed) throw new AppError('OUT_OF_RANGE', { remaining_m: remainingM });
   await insertViewRecord(pool, { capsuleId, userId, lat, lng, accuracy, ipHash: hashIp(ipHashSecret, ip) });
   return { media_url: `/api/media/${capsule.media_id}` };
+}
+
+// 크기·방향 다시 정하기. 주인만 가능하고 위치는 바꿀 수 없다
+export async function updateLook({ pool }, { userId, capsuleId, sizeM, heading }) {
+  const capsule = await findActiveCapsuleById(pool, capsuleId);
+  if (!capsule) throw new AppError('CAPSULE_NOT_FOUND');
+  if (capsule.user_id !== userId) throw new AppError('NOT_OWNER');
+  await updateCapsuleLook(pool, capsuleId, { sizeM: sizeM ?? null, heading: heading ?? null });
 }
 
 export async function deleteCapsule({ pool, storage }, { userId, capsuleId }) {

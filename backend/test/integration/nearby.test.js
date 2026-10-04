@@ -96,7 +96,7 @@ test('BE-08 NFR-06 응답 필드(BE-13 heading 포함)와 thumb_url 형식(/api/
   assert.deepEqual(Object.keys(res.body), ['capsules']);
   assert.equal(res.body.capsules.length, 1);
   const c = res.body.capsules[0];
-  assert.deepEqual(Object.keys(c).sort(), ['heading', 'id', 'is_mine', 'lat', 'lng', 'thumb_url', 'title']);
+  assert.deepEqual(Object.keys(c).sort(), ['cloud_anchor_id', 'grade', 'heading', 'id', 'is_mine', 'lat', 'lng', 'size_m', 'thumb_url', 'title']);
   assert.deepEqual(c, {
     id: cap.id,
     title: '주변 캡슐',
@@ -105,6 +105,9 @@ test('BE-08 NFR-06 응답 필드(BE-13 heading 포함)와 thumb_url 형식(/api/
     heading: 135.5,
     thumb_url: `/api/media/${cap.media_id}/thumb`,
     is_mine: false,
+    grade: 'BRONZE',
+    cloud_anchor_id: null,
+    size_m: 0.4,
   });
   const json = JSON.stringify(res.body);
   assert.ok(!json.includes(`/api/media/${cap.media_id}"`));

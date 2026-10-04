@@ -8,6 +8,8 @@ export const PRM_03_REMEASURE_ACCURACY_M = 30;
 export const PRM_20_DROP_PLACE_RADIUS_M = 10;
 // PRM-06 브론즈 유효 시간 (30일)
 export const PRM_06_BRONZE_TTL_HOURS = 720;
+// PRM-06 실버 유효 시간 (365일, 실험용 허용. 결제 없이 저장됨)
+export const PRM_06_SILVER_TTL_HOURS = 8760;
 // M-01 주변 조회 반경
 export const M_01_NEARBY_RADIUS_M = 200;
 // M-03 업로드 Presigned URL 유효 시간 (5분)
@@ -24,6 +26,11 @@ export const M_06_PHOTO_MAX_BYTES = 10485760;
 export const M_09_REKOGNITION_TIMEOUT_MS = 10000;
 // M-10 비밀번호 최소 길이
 export const M_10_PASSWORD_MIN_LENGTH = 8;
+// XP-01 캡슐 사진 긴 변 길이 범위(m)
+export const XP_01_SIZE_M_MIN = 0.1;
+export const XP_01_SIZE_M_MAX = 2.0;
+// XP-02 기본값
+export const XP_02_SIZE_M_DEFAULT = 0.4;
 // M-11 제목 길이 (코드 포인트 수)
 export const M_11_TITLE_MIN_LENGTH = 1;
 // M-11
