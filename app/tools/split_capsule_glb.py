@@ -1,7 +1,8 @@
 """몸통과 뚜껑이 한 파일에 든 캡슐 GLB를 앱이 쓰는 두 파일로 나눈다.
 
-실행: python app/tools/split_capsule_glb.py <원본.glb>
-결과: app/app/src/main/assets/models/capsule_body.glb, capsule_lid.glb
+실행: python app/tools/split_capsule_glb.py <원본.glb> [이름]
+결과: app/app/src/main/assets/models/<이름>_body.glb, <이름>_lid.glb (이름을 안 주면 capsule)
+예: python app/tools/split_capsule_glb.py time_capsule_diamond.glb capsule_diamond
 원본에 'Body'와 'Lid'라는 이름의 노드가 따로 있어야 한다. 뚜껑 노드의 위치 이동은 지워서
 뚜껑의 원점이 뚜껑 바닥 가운데가 되게 한다(앱이 뚜껑을 몸통 위에 얹고 들어 올린다).
 각 파일에는 그 부분이 쓰는 메시·재질·텍스처만 남긴다.
@@ -17,6 +18,8 @@ OUT = Path(__file__).resolve().parents[1] / 'app/src/main/assets/models'
 LIFT = {'label': 0.003, 'glass': 0.004}
 # 앱의 AR 화면에서 반투명(BLEND) 유리가 불투명한 검은 판처럼 그려져 글자판을 가리는 것으로 보여 뺀다
 DROP = {'glass'}
+# 앱(Filament)이 지원하지 않는 재질 확장은 뺀다. 지원하는 것(ior 등)은 남긴다
+UNSUPPORTED_EXTENSIONS = {'KHR_materials_iridescence'}
 TEX_KEYS = ('baseColorTexture', 'metallicRoughnessTexture', 'normalTexture', 'occlusionTexture', 'emissiveTexture')
 
 
@@ -133,8 +136,14 @@ def extract(doc, blob, node_name, path):
         'bufferViews': views,
         'buffers': [{'byteLength': len(out)}],
     }
-    if any('extensions' in m for m in materials):
-        new['extensionsUsed'] = ['KHR_materials_unlit']
+    for m in materials:
+        for name in UNSUPPORTED_EXTENSIONS:
+            m.get('extensions', {}).pop(name, None)
+        if m.get('extensions') == {}:
+            m.pop('extensions')
+    used = sorted({name for m in materials for name in m.get('extensions', {})})
+    if used:
+        new['extensionsUsed'] = used
     if samplers_used:
         new['samplers'] = [doc['samplers'][s] for s in samplers_used]
     js = json.dumps(new, separators=(',', ':')).encode()
@@ -151,6 +160,7 @@ def extract(doc, blob, node_name, path):
 if __name__ == '__main__':
     doc, blob = read_glb(sys.argv[1])
     OUT.mkdir(parents=True, exist_ok=True)
-    body = extract(doc, blob, 'Body', OUT / 'capsule_body.glb')
-    lid = extract(doc, blob, 'Lid', OUT / 'capsule_lid.glb')
+    name = sys.argv[2] if len(sys.argv) > 2 else 'capsule'
+    body = extract(doc, blob, 'Body', OUT / f'{name}_body.glb')
+    lid = extract(doc, blob, 'Lid', OUT / f'{name}_lid.glb')
     print('뚜껑이 몸통 위에 놓이던 높이(m):', lid.get('translation', [0, 0, 0])[1])

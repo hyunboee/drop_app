@@ -1,26 +1,12 @@
 package com.hyunboee.drop.ar
 
-// OPS-N04 실증에서 만든 AR 실험 화면 (docs/12-native-plan.md). 로그인 뒤에 보이는 임시 화면이며,
-// APP-05 이후 Task에서 서버와 연결된 실제 AR 화면으로 바꾼다.
-// 확인하는 것: 키 없는 인증으로 30일 보관 앵커 저장·인식, SceneView 사진 액자, 사진 선택기
-// 추가 실험: 등급별 표시 — 브론즈는 사진 액자가 그대로 보이고, 상위 등급은 닫힌 캡슐을 열어야 보인다
-//   (docs/13-capsule-dev-plan.md 3장의 대기 → 접근 → 개봉). 3D 모델 파일이 없어 상자 모양으로 대신한다.
+// AR 화면: 캡슐 놓기·저장, 서버 캡슐을 제자리에 불러오기, 열기·닫기·삭제·크기 조절, 길 안내, 촬영.
+// 이 파일은 화면의 상태와 흐름만 둔다. 다른 것은 같은 폴더의 파일로 나눴다:
+//   Capsule.kt(캡슐·등급) ArMedia.kt(사진) AnchorOps.kt(구글 앵커 저장·찾기 정책)
+//   CapsuleScene.kt(3D 장면) ArWidgets.kt(버튼·미니맵 등) NavGuide.kt(길 안내) Sfx.kt(효과음)
 
 import android.Manifest
-import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Matrix
-import android.graphics.Paint
-import android.media.AudioManager
-import android.media.ExifInterface
-import android.media.ToneGenerator
-import android.net.Uri
-import android.content.ContentValues
-import android.os.Build
-import android.provider.MediaStore
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -34,13 +20,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -58,12 +37,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -82,15 +58,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size as UiSize
 import androidx.compose.ui.graphics.Color as UiColor
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -99,6 +71,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hyunboee.drop.M_11_TITLE_MAX_LENGTH
+import com.hyunboee.drop.NP_02_RESOLVE_RANGE_M
 import com.hyunboee.drop.NP_07_MAX_RESOLVING
 import com.hyunboee.drop.NP_12_NEARBY_REFRESH_MS
 import com.hyunboee.drop.NP_13_NAV_ANCHOR_ARRIVE_M
@@ -118,16 +91,11 @@ import com.google.ar.core.Anchor
 import com.google.ar.core.Config
 import com.google.ar.core.Frame
 import com.google.ar.core.Plane
-import com.google.ar.core.Pose
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.ar.ARSceneView
-import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
-import io.github.sceneview.math.Rotation
-import io.github.sceneview.math.Scale
-import io.github.sceneview.math.Size
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelInstance
@@ -135,107 +103,9 @@ import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberOnGestureListener
 import kotlinx.coroutines.delay
 
-private const val TAG = "DropSpike"
-private const val TTL_DAYS = 30
-
-// 실험용 "접근 연출이 시작되는 거리". 실제 앱은 서버가 GPS로 10m(PRM-01)를 판정한다. 실내에서 걸어 보며 확인하려고 짧게 잡았다
-private const val NEAR_M = 1.5f
-
-private const val BRONZE = "BRONZE"
-private const val SILVER = "SILVER"
-
-private fun placeholderBitmap(): Bitmap {
-    val b = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888)
-    val c = Canvas(b)
-    c.drawColor(Color.rgb(233, 211, 154))
-    val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(43, 34, 19)
-        textSize = 96f
-        textAlign = Paint.Align.CENTER
-    }
-    c.drawText("DROP", 256f, 290f, p)
-    return b
-}
-
-// 사진을 읽어 긴 변 1024px로 줄이고, 촬영 방향 정보(EXIF)대로 바로 세운다.
-// 방향 정보를 무시하면 세로로 찍은 사진이 90도 누운 채로 나온다
-private fun decodeUpright(context: Context, uri: Uri): Bitmap? {
-    val orientation = context.contentResolver.openInputStream(uri)?.use {
-        ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-    } ?: ExifInterface.ORIENTATION_NORMAL
-    val raw = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) } ?: return null
-    val m = Matrix()
-    val scale = minOf(1f, 1024f / maxOf(raw.width, raw.height))
-    m.postScale(scale, scale)
-    when (orientation) {
-        ExifInterface.ORIENTATION_ROTATE_90 -> m.postRotate(90f)
-        ExifInterface.ORIENTATION_ROTATE_180 -> m.postRotate(180f)
-        ExifInterface.ORIENTATION_ROTATE_270 -> m.postRotate(270f)
-        ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> m.postScale(-1f, 1f)
-        ExifInterface.ORIENTATION_FLIP_VERTICAL -> m.postScale(1f, -1f)
-    }
-    Log.i(TAG, "PHOTO exif=$orientation raw=${raw.width}x${raw.height}")
-    return Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, m, true)
-}
-
-// 사진을 기기 갤러리(Pictures/Drop)에 저장한다. Android 10 이상은 권한 없이 된다
-internal fun saveToGallery(context: Context, bitmap: Bitmap): Boolean {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false // 실증 앱은 Android 10 이상만 다룬다
-    val resolver = context.contentResolver
-    val values = ContentValues().apply {
-        put(MediaStore.Images.Media.DISPLAY_NAME, "drop_${System.currentTimeMillis()}.jpg")
-        put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Drop")
-        put(MediaStore.Images.Media.IS_PENDING, 1)
-    }
-    val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return false
-    return try {
-        resolver.openOutputStream(uri)?.use { bitmap.compress(Bitmap.CompressFormat.JPEG, 92, it) } ?: return false
-        values.clear()
-        values.put(MediaStore.Images.Media.IS_PENDING, 0)
-        resolver.update(uri, values, null, null)
-        true
-    } catch (e: Exception) {
-        resolver.delete(uri, null, null)
-        false
-    }
-}
-
-private fun distance(a: Pose, b: Pose): Float {
-    val dx = a.tx() - b.tx()
-    val dy = a.ty() - b.ty()
-    val dz = a.tz() - b.tz()
-    return Math.sqrt((dx * dx + dy * dy + dz * dz).toDouble()).toFloat()
-}
-
-// 화면에 놓인 캡슐 하나. 바뀌는 값은 Compose 상태로 둔다
-private class Capsule(
-    val id: String,
-    val anchor: Anchor,
-    val grade: String,
-    bitmap: Bitmap,
-    sizeM: Float,
-    rotDeg: Float,
-    val mine: Boolean = true, // 내가 놓은 캡슐인지 (주인만 삭제할 수 있다)
-) {
-    var serverId: String? = null // 서버에 저장된 캡슐이면 그 ID
-    // 서버에 저장된 크기·방향. 지금 값과 다르면 "변경 저장"을 보여 준다
-    var savedSizeM: Float = sizeM
-    var savedRotDeg: Float = rotDeg
-    val changed get() = serverId != null && (kotlin.math.abs(this.sizeM - savedSizeM) > 0.005f || kotlin.math.abs(rotDeg - savedRotDeg) > 0.5f)
-    var bitmap by mutableStateOf(bitmap)
-    var sizeM by mutableFloatStateOf(sizeM) // 사진 긴 변 길이(m)
-    var rotDeg by mutableFloatStateOf(rotDeg) // 세로축 회전(도)
-    var dist by mutableFloatStateOf(99f)
-    var mapX by mutableFloatStateOf(0f) // 미니맵: 내 오른쪽으로 몇 m
-    var mapY by mutableFloatStateOf(0f) // 미니맵: 내 앞으로 몇 m
-    var opened by mutableStateOf(false)
-    var paid by mutableStateOf(false) // 한 번 결제해서 연 캡슐 (다시 열 때 결제를 묻지 않는다)
-    val closed get() = grade != BRONZE && !opened
-}
 
 @Composable
-fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: () -> Unit) {
+fun ArScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: () -> Unit) {
     val context = LocalContext.current
     val view = LocalView.current
     val main = remember { Handler(Looper.getMainLooper()) }
@@ -270,6 +140,9 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
     var payFor by remember { mutableStateOf<Capsule?>(null) }
     // 삭제 확인 창을 띄울 캡슐, 없으면 null
     var deleteFor by remember { mutableStateOf<Capsule?>(null) }
+    // 신고 사유를 고르는 창, 차단 확인 창을 띄울 캡슐 (다른 사람의 캡슐만)
+    var reportFor by remember { mutableStateOf<Capsule?>(null) }
+    var blockFor by remember { mutableStateOf<Capsule?>(null) }
     // 눌러서 고른 캡슐. 여러 개가 모여 있을 때 잘못 고르지 않도록, 먼저 고르고(파란색) 그다음 열기·닫기·삭제를 한다
     var selected by remember { mutableStateOf<Capsule?>(null) }
 
@@ -374,6 +247,24 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
     }
 
     // 서버 캡슐의 클라우드 앵커를 찾아 그 자리에 띄운다. 사진은 썸네일을 받아 쓴다
+    val resolvePolicy = remember { ResolvePolicy(NP_02_RESOLVE_RANGE_M) }
+
+    // 신고한 캡슐을 화면에서 치운다 (서버는 이미 이 사람에게 그 캡슐을 보내지 않는다)
+    fun hideCapsule(c: Capsule) {
+        c.anchor.detach()
+        if (c === selected) selected = null
+        remote.remove(c)
+        done.remove(c)
+    }
+
+    // 차단한 뒤 서버 캡슐을 모두 내리고 다시 받는다 (누가 남겼는지 앱은 모르므로, 서버가 걸러서 주는 목록으로 다시 채운다)
+    fun reloadRemote() {
+        remote.forEach { it.anchor.detach() }
+        remote.clear()
+        selected = null
+        loadedIds.clear()
+        loadedIds.addAll(done.mapNotNull { it.serverId })
+    }
     fun resolveRemote(serverId: String, anchorId: String, thumbUrl: String, grade: String, sizeM: Float, heading: Float, mine: Boolean) {
         val s = session ?: return
         loadedIds.add(serverId)
@@ -385,16 +276,19 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
                         if (state == Anchor.CloudAnchorState.SUCCESS && anchor != null) {
                             seq += 1
                             remote.add(Capsule("s$seq", anchor, grade, photo, sizeM, heading, mine).also { it.serverId = serverId })
+                            resolvePolicy.onSuccess(serverId)
                             log("RESOLVE_OK $serverId")
                         } else {
-                            // 아직 그 자리를 비추지 않았다. 다음 주기에 다시 찾는다
+                            // 아직 그 자리를 비추지 않았다. 점점 느리게 다시 찾는다 (한도 초과면 잠시 모두 멈춘다)
                             anchor?.detach()
                             loadedIds.remove(serverId)
+                            resolvePolicy.onFail(serverId, state.name, System.currentTimeMillis())
                         }
                     }
                 }
             } catch (e: Exception) {
                 loadedIds.remove(serverId)
+                resolvePolicy.onFail(serverId, "ERROR_INTERNAL", System.currentTimeMillis())
                 log("RESOLVE_EXCEPTION ${e.javaClass.simpleName}: ${e.message}")
             }
         }
@@ -467,6 +361,7 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
                 val list = api.request("GET", "/api/capsules/nearby?lat=${here.latitude}&lng=${here.longitude}")!!.getJSONArray("capsules")
                 val pending = List(list.length()) { list.getJSONObject(it) }
                     .filter { !it.isNull("cloud_anchor_id") && it.getString("id") !in loadedIds }
+                    .filter { resolvePolicy.shouldTry(it.getString("id"), distanceM(here.latitude, here.longitude, it.getDouble("lat"), it.getDouble("lng")), System.currentTimeMillis()) }
                     .sortedBy { distanceM(here.latitude, here.longitude, it.getDouble("lat"), it.getDouble("lng")) }
                 for (c in pending) {
                     if (loadedIds.size >= NP_07_MAX_RESOLVING) break
@@ -616,182 +511,25 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
                                 old?.sizeM ?: sizeM,
                                 old?.rotDeg ?: rotDeg,
                             ).also { it.dist = hit.distance }
-                            val what = if ((old?.grade ?: grade) == BRONZE) "브론즈(사진이 바로 보임)" else "실버(닫힌 캡슐)"
+                            val placedGrade = old?.grade ?: grade
+                            val what = if (placedGrade == BRONZE) "브론즈(사진이 바로 보임)" else "${gradeLabel(placedGrade)}(닫힌 캡슐)"
                             log(if (old == null) "PLACED $what · 자리를 정했으면 [완료]를 누르세요" else "MOVED $what")
                         }
                     }
                 },
             ),
         ) {
-            // AR 길찾기 화살표: 반투명 파란 갈매기 무늬 세 개가 목표 쪽으로 흘러간다.
-            // 다른 노드처럼 항상 두고 크기로 숨긴다. 재질도 노드마다 따로 만든다
-            val arrowMats = remember { List(6) { materialLoader.createUnlitColorInstance(UiColor(0x8C2EA8FF)) } }
-            val flow by rememberInfiniteTransition(label = "nav").animateFloat(0f, 1f, infiniteRepeatable(tween(900, easing = LinearEasing)), label = "flow")
-            Node(position = navPos, rotation = Rotation(y = navYaw), scale = Scale(if (navShown && guiding != null) 1f else 0.0001f)) {
-                for (i in 0 until 3) {
-                    val z = 0.45f - (i + flow) * 0.35f // 앞(-z)으로 흐른다
-                    // 양 끝에서 작아졌다 커져 끊김 없이 이어져 보인다
-                    val grow = Scale(kotlin.math.sin(Math.PI * (i + flow) / 3.0).toFloat().coerceAtLeast(0.05f))
-                    CubeNode(size = Size(0.34f, 0.02f, 0.08f), materialInstance = arrowMats[i * 2], position = Position(x = -0.11f, z = z + 0.11f), rotation = Rotation(y = 45f), scale = grow)
-                    CubeNode(size = Size(0.34f, 0.02f, 0.08f), materialInstance = arrowMats[i * 2 + 1], position = Position(x = 0.11f, z = z + 0.11f), rotation = Rotation(y = -45f), scale = grow)
-                }
-            }
-
+            NavArrow(materialLoader, navPos, navYaw, navShown && guiding != null)
             all.forEach { item ->
                 // 캡슐마다 노드 묶음을 따로 만든다. 옮기면 ID가 바뀌어 통째로 새로 만들어진다
-                key(item.id) {
-                    val near = item.dist <= NEAR_M
-                    // 사진의 가로·세로를 비율대로, 긴 변이 sizeM이 되게 한다
-                    val bw = item.bitmap.width.toFloat()
-                    val bh = item.bitmap.height.toFloat()
-                    val baseW = bw / maxOf(bw, bh) // 긴 변을 1m로 둔 기본 크기
-                    val baseH = bh / maxOf(bw, bh)
-                    val ph = item.sizeM * baseH // 실제로 보이는 높이
-                    AnchorNode(anchor = item.anchor) {
-                        // 세로축 회전은 묶음 노드 하나로 전체에 적용한다
-                        Node(rotation = Rotation(y = item.rotDeg)) {
-                            // 놓는 중([완료] 전)인 캡슐의 노란 테두리. 사진 뒤에 조금 더 큰 노란 판을 대고, 상자 밑에는 노란 받침을 깐다.
-                            // 다른 노드처럼 항상 두고 크기로 숨긴다. [완료]를 누르면 사라진다
-                            val placing = item === current
-                            val edge = 0.03f // 테두리 폭(m)
-                            val edgeMats = remember { List(2) { materialLoader.createUnlitColorInstance(UiColor(0xFFFFD21E)) } }
-                            if (item.grade == BRONZE) {
-                                CubeNode(
-                                    size = Size(1f, 1f, 0.004f),
-                                    materialInstance = edgeMats[0],
-                                    position = Position(y = ph / 2f, z = -0.004f),
-                                    scale = if (placing) Scale(item.sizeM * baseW + edge, ph + edge, 1f) else Scale(0.0001f),
-                                )
-                                // 브론즈: 사진 액자가 그대로 보인다
-                                key(item.bitmap) {
-                                    ImageNode(
-                                        bitmap = item.bitmap,
-                                        size = Size(baseW, baseH),
-                                        position = Position(y = ph / 2f),
-                                        scale = Scale(item.sizeM),
-                                    )
-                                }
-                                // 고른 사진 위에 파란 표시를 띄운다
-                                TextNode(
-                                    text = "선택됨",
-                                    backgroundColor = 0xEE1E6BFF.toInt(),
-                                    position = Position(y = ph + 0.12f),
-                                    scale = Scale(if (item === selected) 1f else 0.0001f),
-                                )
-                            } else {
-                                // 상위 등급: 대기(작고 어두움) → 접근(솟아오르고 밝아짐) → 개봉(뚜껑이 열리고 사진이 떠오름)
-                                // 노드는 넣었다 빼지 않고 항상 둔 채 크기로 숨긴다. 재질도 노드마다 따로 만든다.
-                                // (노드를 넣었다 빼거나 재질을 바꿔 끼우면 다시 열 때 상자와 사진이 안 보이는 문제가 있었다)
-                                // 솟아오름·내려감·열림 소리: 상태가 바뀐 순간에만 낸다 (처음 그려질 때는 내지 않는다)
-                                val risen = near || item.opened || item === selected
-                                var before by remember { mutableStateOf(risen to item.opened) }
-                                LaunchedEffect(risen, item.opened) {
-                                    val (wasRisen, wasOpened) = before
-                                    before = risen to item.opened
-                                    when {
-                                        item.opened && !wasOpened -> sfx.play(SfxKind.OPEN)
-                                        risen && !wasRisen -> sfx.play(SfxKind.RISE)
-                                        !risen && wasRisen -> sfx.play(SfxKind.LOWER)
-                                    }
-                                }
-                                val rise by animateFloatAsState(if (near || item.opened || item === selected) 1f else 0f, tween(1200), label = "rise")
-                                val open by animateFloatAsState(if (item.opened) 1f else 0f, tween(800), label = "open")
-                                // 캡슐 모델(몸통·뚜껑). 노드는 항상 두고, 상태 색은 아래 받침 원판의 색으로 알린다.
-                                // 상태 색: 고른 것은 파란색, 이미 결제한 것은 회색, 가까이 가면 금색, 그 밖은 어두운 갈색.
-                                // (재질을 바꿔 끼우지 않으려고 색마다 원판을 따로 두고 하나만 보이게 한다)
-                                val bodyModel = rememberModelInstance(modelLoader, "models/capsule_body.glb")
-                                val lidModel = rememberModelInstance(modelLoader, "models/capsule_lid.glb")
-                                val stateColors = listOf(UiColor(0xFF6B5A3A), UiColor(0xFFE9D39A), UiColor(0xFF1E6BFF), UiColor(0xFF9A9A9A))
-                                val stateMats = remember { stateColors.map { materialLoader.createUnlitColorInstance(it) } }
-                                val glowMats = remember { List(9) { materialLoader.createUnlitColorInstance(UiColor(0xFFFFF4C2)) } }
-                                val hidden = 0.0001f
-                                val shown = when {
-                                    item === selected -> 2 // 파란색
-                                    item.paid -> 3 // 회색
-                                    near || item.opened -> 1 // 금색
-                                    else -> 0
-                                }
-                                // 모델 원점은 몸통 바닥, 높이 0.323m(뚜껑 별도 0.077m, 전체 약 0.4m). 대기 때는 반쯤 묻혀 있다가 솟아오른다
-                                val baseY = -0.20f + 0.20f * rise
-                                val bodyY = baseY + 0.223f // 뚜껑 자리(몸통 윗면 = bodyY + 0.10) 기준
-                                for (i in stateColors.indices) {
-                                    CylinderNode(
-                                        radius = 0.17f,
-                                        height = 0.004f,
-                                        materialInstance = stateMats[i],
-                                        position = Position(y = 0.002f),
-                                        scale = Scale(if (i == shown) 1f else hidden),
-                                    )
-                                }
-                                bodyModel?.let { ModelNode(modelInstance = it, position = Position(y = baseY)) }
-                                // 열리면 뚜껑이 위로 들리며 뒤로 젖혀진다
-                                lidModel?.let {
-                                    ModelNode(modelInstance = it, position = Position(y = baseY + 0.323f + 0.18f * open, z = -0.10f * open), rotation = Rotation(x = -60f * open))
-                                }
-                                // 놓는 중([완료] 전) 노란 받침 (열어서 사진이 나오면 사진 뒤 노란 판으로 바뀐다)
-                                CubeNode(
-                                    size = Size(0.36f, 0.006f, 0.36f),
-                                    materialInstance = edgeMats[0],
-                                    position = Position(y = 0.004f),
-                                    scale = Scale(if (placing && open < 0.5f) 1f else hidden),
-                                )
-                                CubeNode(
-                                    size = Size(1f, 1f, 0.004f),
-                                    materialInstance = edgeMats[1],
-                                    position = Position(y = bodyY + 0.14f + (0.10f + ph / 2f) * open, z = -0.004f),
-                                    scale = if (placing && open >= 0.5f) Scale((item.sizeM * baseW + edge) * open, (ph + edge) * open, 1f) else Scale(hidden),
-                                )
-
-                                // 열리는 동안 빛: 밝은 구가 상자에서 부풀었다 사라지고, 작은 빛 알갱이가 퍼진다
-                                val bursting = open > 0.01f && open < 0.99f
-                                val fade = 1f - open
-                                SphereNode(
-                                    radius = 0.13f,
-                                    materialInstance = glowMats[8],
-                                    position = Position(y = bodyY + 0.10f),
-                                    scale = Scale(if (bursting) (0.6f + 2.2f * open) * fade else hidden),
-                                )
-                                for (i in 0 until 8) {
-                                    val ang = Math.toRadians(i * 45.0)
-                                    SphereNode(
-                                        radius = 0.02f,
-                                        materialInstance = glowMats[i],
-                                        position = Position(
-                                            x = (Math.cos(ang) * 0.35 * open).toFloat(),
-                                            y = bodyY + 0.12f + 0.45f * open,
-                                            z = (Math.sin(ang) * 0.35 * open).toFloat(),
-                                        ),
-                                        scale = Scale(if (bursting) fade else hidden),
-                                    )
-                                }
-                                key(item.bitmap) {
-                                    ImageNode(
-                                        bitmap = item.bitmap,
-                                        size = Size(baseW, baseH),
-                                        position = Position(y = bodyY + 0.14f + (0.10f + ph / 2f) * open),
-                                        scale = Scale(maxOf(open * item.sizeM, hidden)),
-                                    )
-                                }
-                                TextNode(
-                                    text = when {
-                                        item === selected -> "선택됨"
-                                        item.paid -> "결제 완료"
-                                        else -> "실버 캡슐 · ${"%.1f".format(item.dist)}m"
-                                    },
-                                    position = Position(y = bodyY + 0.32f),
-                                    scale = Scale(if (open > 0.05f) hidden else 1f),
-                                )
-                            }
-                        }
-                    }
-                }
+                key(item.id) { CapsuleNode(item, item === selected, item === current, materialLoader, modelLoader, sfx) }
             }
         }
 
         payFor?.let { c ->
             AlertDialog(
                 onDismissRequest = { payFor = null },
-                title = { Text("실버 상자입니다") },
+                title = { Text("${gradeLabel(c.grade)} 상자입니다") },
                 text = { Text("유료 결제 1달러 진행하시겠습니까?") },
                 confirmButton = {
                     TextButton(onClick = {
@@ -849,7 +587,13 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
                             scope.launch {
                                 try {
                                     // 먼저 그 자리를 구글에 고정하고(다시 와서 같은 자리에 보이게), 그 ID와 함께 서버에 올린다
-                                    val anchorId = session?.let { hostAnchor(it, c.anchor) }
+                                    val s = session
+                                    val host = if (s == null) {
+                                        HostResult.Failed("AR 화면이 아직 준비되지 않았어요")
+                                    } else {
+                                        hostAnchor(s, c.anchor, anchorTtlDays(c.grade), { frameHolder[0]?.camera?.pose }) { msg -> saveStatus = SaveStatus(SaveKind.SAVING, msg) }
+                                    }
+                                    val anchorId = (host as? HostResult.Ok)?.id
                                     val sid = publishCapsule(api, c.bitmap, name, here.latitude, here.longitude, here.accuracy, c.rotDeg, anchorId, c.sizeM, c.grade)
                                     c.serverId = sid
                                     c.savedSizeM = c.sizeM
@@ -858,7 +602,7 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
                                     log("'$name' 저장했어요 · 홈과 지도에 나와요" + (if (anchorId == null) " (자리 고정은 실패해 AR에서는 다시 안 보여요)" else ""))
                                     saveStatus = SaveStatus(
                                         if (anchorId == null) SaveKind.FAILED else SaveKind.DONE,
-                                        if (anchorId == null) "'$name'은(는) 저장됐지만 자리 고정에 실패해 AR에서는 다시 안 보여요. 주변을 더 비추고 다시 놓아 주세요" else "'$name' 저장 완료 · 이제 이 자리를 벗어나도 돼요",
+                                        if (anchorId == null) "'$name'은(는) 저장됐지만 자리 고정에 실패해 AR에서는 다시 안 보여요. ${(host as? HostResult.Failed)?.reason ?: ""}" else "'$name' 저장 완료 · 이제 이 자리를 벗어나도 돼요",
                                     )
                                 } catch (e: ApiException) {
                                     log("'$name' 저장 실패: ${e.message}")
@@ -872,6 +616,61 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
                     }) { Text("저장") }
                 },
                 dismissButton = { TextButton(onClick = { naming = null }) { Text("저장 안 함") } },
+            )
+        }
+
+        // 신고: 사유를 고르면 바로 접수하고 이 캡슐은 더 이상 보이지 않는다
+        reportFor?.let { c ->
+            AlertDialog(
+                onDismissRequest = { reportFor = null },
+                title = { Text("이 캡슐을 신고할까요?") },
+                text = {
+                    Column {
+                        Text("신고하면 이 캡슐이 더 이상 보이지 않고, 운영자가 검토해요. 사유를 골라 주세요.", fontSize = 13.sp)
+                        for ((code, label) in REPORT_REASONS) {
+                            TextButton(onClick = {
+                                reportFor = null
+                                val sid = c.serverId ?: return@TextButton
+                                scope.launch {
+                                    try {
+                                        api.request("POST", "/api/capsules/$sid/report", JSONObject().put("reason", code))
+                                        hideCapsule(c)
+                                        log("신고했어요 · 이 캡슐은 더 이상 보이지 않아요")
+                                    } catch (e: ApiException) {
+                                        log("신고하지 못했어요: ${e.message}")
+                                    }
+                                }
+                            }) { Text(label) }
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = { TextButton(onClick = { reportFor = null }) { Text("취소") } },
+            )
+        }
+
+        // 차단: 이 캡슐을 남긴 사람의 모든 캡슐이 나에게 보이지 않는다
+        blockFor?.let { c ->
+            AlertDialog(
+                onDismissRequest = { blockFor = null },
+                title = { Text("이 캡슐을 남긴 사람을 차단할까요?") },
+                text = { Text("그 사람의 모든 캡슐이 나에게 보이지 않아요. 홈의 \"차단 목록\"에서 풀 수 있어요.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        blockFor = null
+                        val sid = c.serverId ?: return@TextButton
+                        scope.launch {
+                            try {
+                                api.request("POST", "/api/capsules/$sid/block-owner")
+                                reloadRemote()
+                                log("차단했어요 · 그 사람의 캡슐이 더 이상 보이지 않아요")
+                            } catch (e: ApiException) {
+                                log("차단하지 못했어요: ${e.message}")
+                            }
+                        }
+                    }) { Text("차단", color = Tokens.Error) }
+                },
+                dismissButton = { TextButton(onClick = { blockFor = null }) { Text("취소") } },
             )
         }
 
@@ -943,25 +742,7 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
         ) {
             if (zoom > 1.02f) Pill("🔍 ${"%.1f".format(zoom)}× · 눌러서 원래대로", { zoom = 1f }, small = true)
             // 저장 진행·완료 안내: 아래 영역의 맨 위에 두어 위쪽의 상태 카드·미니맵과 겹치지 않게 한다
-            saveStatus?.let { st ->
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(PanelShape)
-                        .background(Tokens.Surface)
-                        .border(1.dp, when (st.kind) { SaveKind.SAVING -> Tokens.Amber; SaveKind.DONE -> UiColor(0xFF7BD88F); SaveKind.FAILED -> Tokens.Error }, PanelShape)
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    when (st.kind) {
-                        SaveKind.SAVING -> CircularProgressIndicator(Modifier.size(22.dp), color = Tokens.Amber, strokeWidth = 2.5.dp)
-                        SaveKind.DONE -> Text("✓", color = UiColor(0xFF7BD88F), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        SaveKind.FAILED -> Text("!", color = Tokens.Error, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Text(st.text, color = Tokens.HomeText, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                }
-            }
+            saveStatus?.let { SaveBanner(it) }
 
             // 크기·회전과 동작: 캡슐을 골랐거나 놓는 중일 때만 보인다
             target?.let { t ->
@@ -1031,6 +812,11 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
                                     }
                                 }, primary = true)
                             }
+                            // 다른 사람의 캡슐은 신고하거나 그 사람을 차단할 수 있다
+                            if (!c.mine && c.serverId != null) {
+                                Pill("신고", { reportFor = c }, danger = true)
+                                Pill("차단", { blockFor = c }, danger = true)
+                            }
                             Pill("삭제", { if (c.mine) deleteFor = c else log("NOT_OWNER ${c.id} · 이 캡슐의 주인만 삭제할 수 있어요") }, danger = true)
                             Pill("해제", { selected = null })
                         }
@@ -1039,7 +825,7 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
             }
             // 놓기: 등급 고르기 → 사진 고르기 → (평면을 눌러 놓은 뒤) 완료
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Pill(if (grade == BRONZE) "● 브론즈" else "● 실버", { grade = if (grade == BRONZE) SILVER else BRONZE }, textColor = if (grade == BRONZE) Tokens.Bronze else Tokens.Silver)
+                Pill("● ${gradeLabel(grade)}", { grade = GRADES[(GRADES.indexOf(grade) + 1) % GRADES.size] }, textColor = when (grade) { BRONZE -> Tokens.Bronze; SILVER -> Tokens.Silver; else -> Tokens.Diamond })
                 Pill("사진 고르기", { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) })
                 // 지금 고른 사진이 맞는지 알아볼 정도의 작은 미리 보기
                 Image(bitmap.asImageBitmap(), contentDescription = "고른 사진", modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
@@ -1077,100 +863,3 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
     }
 }
 
-private fun findTextureView(v: View): TextureView? = when (v) {
-    is TextureView -> v
-    is ViewGroup -> (0 until v.childCount).firstNotNullOfOrNull { findTextureView(v.getChildAt(it)) }
-    else -> null
-}
-
-private const val ZOOM_MIN = 1f
-private const val ZOOM_MAX = 5f
-
-private fun findSurfaceView(v: View): SurfaceView? = when (v) {
-    is SurfaceView -> v
-    is ViewGroup -> (0 until v.childCount).firstNotNullOfOrNull { findSurfaceView(v.getChildAt(it)) }
-    else -> null
-}
-
-// 이름·값은 왼쪽에 작게, 슬라이더는 가는 한 줄로 둔다
-@Composable
-private fun CompactSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, colors: androidx.compose.material3.SliderColors, onChange: (Float) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = Tokens.HomeSub, fontSize = 11.sp, modifier = Modifier.width(84.dp))
-        Slider(value = value, onValueChange = onChange, valueRange = range, colors = colors, modifier = Modifier.weight(1f).height(30.dp))
-    }
-}
-
-private enum class SaveKind { SAVING, DONE, FAILED }
-
-private class SaveStatus(val kind: SaveKind, val text: String)
-
-private val PanelShape = RoundedCornerShape(16.dp)
-
-// ponytail: 실내 실험이라 미니맵 범위를 5m로 둔다. 실제 앱은 NP-06(30m)과 서버의 주변 캡슐로 바꾼다
-private const val MINIMAP_RANGE_M = 5f
-
-// 미니맵: 가운데가 나, 위쪽이 내가 보는 방향. 사진이 보이는 캡슐은 동그라미, 닫힌 상자는 네모
-@Composable
-private fun MiniMap(capsules: List<Capsule>) {
-    Canvas(Modifier.size(96.dp).clip(CircleShape).background(Tokens.Surface).border(1.dp, Tokens.CardLine, CircleShape)) {
-        val r = size.minDimension / 2f
-        val mark = 5.dp.toPx()
-        drawCircle(Tokens.CardLine, radius = r / 2f, style = Stroke(1.dp.toPx()))
-        for (c in capsules) {
-            val x = c.mapX / MINIMAP_RANGE_M * r
-            val y = -c.mapY / MINIMAP_RANGE_M * r
-            if (kotlin.math.hypot(x, y) > r - mark) continue // 범위 밖
-            val at = center + Offset(x, y)
-            if (c.closed) {
-                drawRect(Tokens.Silver, topLeft = at - Offset(mark, mark), size = UiSize(mark * 2, mark * 2))
-            } else {
-                drawCircle(Tokens.Amber, radius = mark, center = at)
-            }
-        }
-        // 나: 가운데 흰 점과 보는 방향
-        drawCircle(Tokens.HomeText, radius = 3.dp.toPx(), center = center)
-        drawLine(Tokens.HomeText, center, center - Offset(0f, 9.dp.toPx()), strokeWidth = 1.5.dp.toPx())
-    }
-}
-
-// 카메라 영상 위에 뜨는 알약 모양 버튼. primary는 앰버 채움(한 줄에 하나), danger는 되돌릴 수 없는 동작
-@Composable
-private fun Pill(
-    text: String,
-    onClick: () -> Unit,
-    primary: Boolean = false,
-    danger: Boolean = false,
-    small: Boolean = false,
-    enabled: Boolean = true,
-    textColor: UiColor = Tokens.HomeText,
-) {
-    Text(
-        text,
-        color = when {
-            primary -> Tokens.TextOnGold
-            danger -> Tokens.Error
-            small -> Tokens.HomeSub
-            else -> textColor
-        },
-        fontSize = if (small) 12.sp else 14.sp,
-        fontWeight = if (primary) FontWeight.Bold else FontWeight.Medium,
-        modifier = Modifier
-            .alpha(if (enabled) 1f else 0.4f)
-            .clip(RoundedCornerShape(50))
-            .background(if (primary) Tokens.Amber else Tokens.Surface)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = if (small) 12.dp else 16.dp, vertical = if (small) 8.dp else 11.dp),
-    )
-}
-
-// 캡슐의 자리를 클라우드 앵커로 저장하고 ID를 돌려준다. 실패하면 null
-private suspend fun hostAnchor(session: Session, anchor: Anchor): String? = suspendCoroutine { cont ->
-    try {
-        session.hostCloudAnchorAsync(anchor, TTL_DAYS) { id, state ->
-            cont.resume(if (state == Anchor.CloudAnchorState.SUCCESS) id else null)
-        }
-    } catch (e: Exception) {
-        cont.resume(null)
-    }
-}

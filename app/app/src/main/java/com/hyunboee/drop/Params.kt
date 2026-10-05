@@ -40,5 +40,14 @@ const val NP_15_INTRO_FADE_MS = 1500L
 // NP-07 동시에 자리를 찾는 클라우드 앵커 수 (가까운 순서)
 const val NP_07_MAX_RESOLVING = 30
 
+// NP-02 앵커 자리를 찾기 시작하는 반경(m): 캡슐의 GPS 좌표에서 이 거리 안일 때만 구글에 찾기를 요청한다 (할당량 절약)
+const val NP_02_RESOLVE_RANGE_M = 30.0
+
+// NP-04 자리를 저장하기 전에 스캔 품질이 "충분"해지기를 기다리는 최대 시간(ms). 넘으면 그대로 시도한다
+const val NP_04_SCAN_WAIT_MS = 20_000L
+
+// NP-05 자리 저장(host) 한 번의 제한 시간(ms)
+const val NP_05_HOST_TIMEOUT_MS = 60_000L
+
 // NP-12 AR 화면이 주변 서버 캡슐을 다시 받는 주기(ms)
 const val NP_12_NEARBY_REFRESH_MS = 15_000L

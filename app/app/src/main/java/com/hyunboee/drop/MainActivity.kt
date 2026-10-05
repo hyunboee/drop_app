@@ -24,7 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.hyunboee.drop.api.ApiClient
 import com.hyunboee.drop.api.ApiException
-import com.hyunboee.drop.ar.SpikeScreen
+import com.hyunboee.drop.ar.ArGate
 import com.hyunboee.drop.auth.Session
 import com.hyunboee.drop.auth.TokenStore
 import com.hyunboee.drop.ui.Home
@@ -89,7 +89,7 @@ private fun App(session: Session) {
         else -> Box(Modifier.fillMaxSize()) {
             if (inAr) {
                 BackHandler { backToMap = false; inAr = false }
-                SpikeScreen(session.api, navTarget, onHome = { backToMap = false; inAr = false }, onMap = { backToMap = true; inAr = false })
+                ArGate(session.api, navTarget, onHome = { backToMap = false; inAr = false }, onMap = { backToMap = true; inAr = false })
             } else {
                 Home(session.api, user.email, homeData, onCheckUpdate = if (BuildConfig.IN_APP_UPDATE) ({ checkUpdate(true) }) else null, startOnMap = backToMap, onOpenAr = { navTarget = it; inAr = true }, onLogout = { scope.launch { session.logout() } })
             }

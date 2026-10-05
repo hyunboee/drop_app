@@ -38,7 +38,7 @@ fun NavGuide(target: MapPin, anchorDist: Float?, onTurn: (Float?) -> Unit, onSto
     val azimuth by rememberAzimuth(upright = true)
     val here = location
     val dist = here?.let { distanceM(it.latitude, it.longitude, target.lat, target.lng) }
-    // AR로 캡슐 자리를 찾았으면 화살표는 SpikeScreen이 AR 위치로 가리키므로 GPS 방향은 보내지 않는다
+    // AR로 캡슐 자리를 찾았으면 화살표는 ArScreen이 AR 위치로 가리키므로 GPS 방향은 보내지 않는다
     val turn = if (anchorDist != null || here == null || dist == null || dist <= NP_11_NAV_ARRIVE_M) {
         null
     } else {

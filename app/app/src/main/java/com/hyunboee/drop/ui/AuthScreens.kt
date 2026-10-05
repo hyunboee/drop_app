@@ -1,6 +1,5 @@
 package com.hyunboee.drop.ui
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,6 +40,11 @@ fun LoginScreen(session: Session, onSignup: () -> Unit) {
     var password by remember { mutableStateOf(saved?.second ?: "") }
     var keepLogin by remember { mutableStateOf(saved != null) }
     val context = LocalContext.current
+    var legalDoc by remember { mutableStateOf<String?>(null) }
+    legalDoc?.let {
+        LegalScreen(session.api, it, onBack = { legalDoc = null })
+        return
+    }
     var googleToken by remember { mutableStateOf<String?>(null) } // 처음 오는 구글 계정이라 약관 동의를 받는 중인 토큰
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -109,9 +113,10 @@ fun LoginScreen(session: Session, onSignup: () -> Unit) {
             title = { Text("처음 오셨네요") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Tokens.Space3)) {
-                    DropCheckbox("이용약관·개인정보 처리 동의", terms, { terms = it })
-                    DropCheckbox("위치정보 이용 동의", location, { location = it })
+                    DropCheckbox("이용약관·개인정보 처리 동의", terms, { terms = it }, { legalDoc = "terms" })
+                    DropCheckbox("위치정보 이용 동의", location, { location = it }, { legalDoc = "location" })
                     DropCheckbox("만 14세 이상입니다", age, { age = it })
+                    TextLink("개인정보 처리방침 보기", { legalDoc = "privacy" })
                 }
             },
             confirmButton = {
@@ -143,7 +148,6 @@ fun LoginScreen(session: Session, onSignup: () -> Unit) {
 @Composable
 fun SignupScreen(session: Session, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var terms by remember { mutableStateOf(false) }
@@ -151,15 +155,20 @@ fun SignupScreen(session: Session, onBack: () -> Unit) {
     var age by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
-    val viewTerms = { Toast.makeText(context, "약관 전문은 준비 중이에요", Toast.LENGTH_SHORT).show() }
+    var legalDoc by remember { mutableStateOf<String?>(null) }
+    legalDoc?.let {
+        LegalScreen(session.api, it, onBack = { legalDoc = null })
+        return
+    }
 
     PhotoScreen(top = { TextLink("‹ 로그인", onBack) }) {
         UnderlineInput("이메일", email, { email = it }, placeholder = "you@example.com", keyboardType = KeyboardType.Email)
         UnderlineInput("비밀번호 (${M_10_PASSWORD_MIN_LENGTH}자 이상)", password, { password = it }, password = true, keyboardType = KeyboardType.Password)
         Column(verticalArrangement = Arrangement.spacedBy(Tokens.Space3)) {
-            DropCheckbox("이용약관·개인정보 처리 동의", terms, { terms = it }, viewTerms)
-            DropCheckbox("위치정보 이용 동의", location, { location = it }, viewTerms)
-            DropCheckbox("만 14세 이상입니다", age, { age = it }, viewTerms)
+            DropCheckbox("이용약관·개인정보 처리 동의", terms, { terms = it }, { legalDoc = "terms" })
+            DropCheckbox("위치정보 이용 동의", location, { location = it }, { legalDoc = "location" })
+            DropCheckbox("만 14세 이상입니다", age, { age = it })
+            TextLink("개인정보 처리방침 보기", { legalDoc = "privacy" })
             // AR 기능이 카메라·위치 데이터를 Google에 보낸다는 점을 가입 때 알린다 (네이티브 PRD NFR-N06)
             Text("AR 기능을 쓰는 동안 카메라·위치 데이터가 Google에 전송돼요", style = Tokens.Caption, color = Tokens.TextMuted, modifier = Modifier.padding(top = Tokens.Space1))
         }

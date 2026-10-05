@@ -42,6 +42,8 @@ object Tokens {
     val BronzeBg = Color(0xFF3A2A16)
     val Silver = Color(0xFFC9CDD6)
     val SilverBg = Color(0xFF2B303A)
+    val Diamond = Color(0xFF8FD8FF)
+    val DiamondBg = Color(0xFF1A2F3D)
 
     // --gradient-gold: 주요 버튼 채움 (왼쪽 → 오른쪽)
     val GradientGold = Brush.horizontalGradient(

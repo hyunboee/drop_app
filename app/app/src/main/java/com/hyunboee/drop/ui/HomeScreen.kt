@@ -60,7 +60,7 @@ import com.hyunboee.drop.lib.displayName
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-internal class MyCapsule(val id: String, val title: String, val grade: String, val thumbUrl: String, val lat: Double, val lng: Double, val daysLeft: Int, val viewCount: Int)
+internal class MyCapsule(val id: String, val title: String, val grade: String, val thumbUrl: String, val lat: Double, val lng: Double, val daysLeft: Int?, val viewCount: Int)
 
 internal class OpenedCapsule(val id: String, val title: String, val thumbUrl: String, val mediaUrl: String)
 
@@ -82,6 +82,8 @@ fun Home(api: ApiClient, email: String, data: HomeData, onCheckUpdate: (() -> Un
     val archive = data.archive
     var error by remember { mutableStateOf<String?>(null) }
     var showArchive by remember { mutableStateOf(false) }
+    var legalDoc by remember { mutableStateOf<String?>(null) }
+    var showBlocked by remember { mutableStateOf(false) }
     var viewing by remember { mutableStateOf<OpenedCapsule?>(null) }
     var showMap by remember { mutableStateOf(startOnMap) }
     var deleting by remember { mutableStateOf<MyCapsule?>(null) } // 삭제 확인 창을 띄울 캡슐
@@ -92,7 +94,7 @@ fun Home(api: ApiClient, email: String, data: HomeData, onCheckUpdate: (() -> Un
             val now = System.currentTimeMillis()
             error = null
             data.mine = api.request("GET", "/api/capsules/mine")!!.items().map {
-                MyCapsule(it.getString("id"), it.getString("title"), it.getString("grade"), it.getString("thumb_url"), it.getDouble("lat"), it.getDouble("lng"), daysLeft(it.getString("expires_at"), now), it.getInt("view_count"))
+                MyCapsule(it.getString("id"), it.getString("title"), it.getString("grade"), it.getString("thumb_url"), it.getDouble("lat"), it.getDouble("lng"), if (it.isNull("expires_at")) null else daysLeft(it.getString("expires_at"), now), it.getInt("view_count"))
             }
             data.archive = api.request("GET", "/api/capsules/archive")!!.items().map {
                 OpenedCapsule(it.getString("id"), it.getString("title"), it.getString("thumb_url"), it.getString("media_url"))
@@ -132,6 +134,8 @@ fun Home(api: ApiClient, email: String, data: HomeData, onCheckUpdate: (() -> Un
             BackHandler { viewing = null }
             Viewer(api, shown, onClose = { viewing = null })
         }
+        legalDoc != null -> LegalScreen(api, legalDoc!!, onBack = { legalDoc = null })
+        showBlocked -> BlockedScreen(api, onBack = { showBlocked = false })
         showMap -> {
             BackHandler { showMap = false }
             MapScreen(mine.map { MapPin(it.id, it.title, it.lat, it.lng) }, onBack = { showMap = false }, onNavigate = { onOpenAr(it) })
@@ -140,7 +144,7 @@ fun Home(api: ApiClient, email: String, data: HomeData, onCheckUpdate: (() -> Un
             BackHandler { showArchive = false }
             ArchiveScreen(api, archive, onBack = { showArchive = false }, onView = { viewing = it })
         }
-        else -> HomeScreen(api, email, mine, archive, error, { onOpenAr(null) }, onLogout, onCheckUpdate, onArchive = { showArchive = true }, onMap = { showMap = true }, onView = { viewing = it }, onDelete = { deleting = it })
+        else -> HomeScreen(api, email, mine, archive, error, { onOpenAr(null) }, onLogout, onCheckUpdate, onLegal = { legalDoc = it }, onBlocked = { showBlocked = true }, onArchive = { showArchive = true }, onMap = { showMap = true }, onView = { viewing = it }, onDelete = { deleting = it })
     }
 }
 
@@ -154,6 +158,8 @@ private fun HomeScreen(
     onOpenAr: () -> Unit,
     onLogout: () -> Unit,
     onCheckUpdate: (() -> Unit)?,
+    onLegal: (String) -> Unit,
+    onBlocked: () -> Unit,
     onArchive: () -> Unit,
     onMap: () -> Unit,
     onView: (OpenedCapsule) -> Unit,
@@ -172,6 +178,8 @@ private fun HomeScreen(
                 GradeChip("브론즈", mine.count { it.grade == "BRONZE" }, Tokens.Bronze)
                 Spacer(Modifier.width(Tokens.Space2))
                 GradeChip("실버", mine.count { it.grade == "SILVER" }, Tokens.Silver)
+                Spacer(Modifier.width(Tokens.Space2))
+                GradeChip("다이아", mine.count { it.grade == "DIAMOND" }, Tokens.Diamond)
                 Spacer(Modifier.weight(1f))
                 Text(name, color = Tokens.HomeText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 Spacer(Modifier.width(Tokens.Space2))
@@ -189,7 +197,7 @@ private fun HomeScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Stat("남긴 캡슐", mine.size, Tokens.HomeText)
                 Stat("열어 본 캡슐", archive.size, Tokens.HomeText)
-                Stat("곧 만료", mine.count { it.daysLeft <= NP_08_EXPIRING_SOON_DAYS }, Tokens.Amber)
+                Stat("곧 만료", mine.count { (it.daysLeft ?: Int.MAX_VALUE) <= NP_08_EXPIRING_SOON_DAYS }, Tokens.Amber)
             }
 
             error?.let { Text(it, style = Tokens.Caption, color = Tokens.Error) }
@@ -214,6 +222,12 @@ private fun HomeScreen(
 
             Column(Modifier.fillMaxWidth().padding(bottom = Tokens.Space4), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Tokens.Space2)) {
                 if (onCheckUpdate != null) TextLink("업데이트 확인 · 현재 v${com.hyunboee.drop.BuildConfig.VERSION_NAME}", onCheckUpdate)
+                Row(horizontalArrangement = Arrangement.spacedBy(Tokens.Space4)) {
+                    TextLink("이용약관", { onLegal("terms") })
+                    TextLink("개인정보 처리방침", { onLegal("privacy") })
+                    TextLink("위치정보 약관", { onLegal("location") })
+                }
+                TextLink("차단 목록", onBlocked)
                 TextLink("로그아웃", onLogout)
             }
         }
@@ -269,7 +283,11 @@ private fun Empty(text: String) {
 
 @Composable
 private fun MineRow(api: ApiClient, c: MyCapsule, onDelete: () -> Unit) {
-    val silver = c.grade != "BRONZE"
+    val (label, color, bg) = when (c.grade) {
+        "SILVER" -> Triple("실버", Tokens.Silver, Tokens.SilverBg)
+        "DIAMOND" -> Triple("다이아", Tokens.Diamond, Tokens.DiamondBg)
+        else -> Triple("브론즈", Tokens.Amber, Tokens.BronzeBg)
+    }
     Row(Modifier.fillMaxWidth().clip(CardShape).background(Tokens.Card).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
         RemoteImage(api, c.thumbUrl, Modifier.size(52.dp).clip(RoundedCornerShape(12.dp)))
         Spacer(Modifier.width(Tokens.Space3))
@@ -280,11 +298,11 @@ private fun MineRow(api: ApiClient, c: MyCapsule, onDelete: () -> Unit) {
         Spacer(Modifier.width(Tokens.Space2))
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Tokens.Space2)) {
         Text(
-            "${if (silver) "실버" else "브론즈"} D-${c.daysLeft}",
-            color = if (silver) Tokens.Silver else Tokens.Amber,
+            "$label ${c.daysLeft?.let { "D-$it" } ?: "평생"}",
+            color = color,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.clip(Pill).background(if (silver) Tokens.SilverBg else Tokens.BronzeBg).padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.clip(Pill).background(bg).padding(horizontal = 10.dp, vertical = 6.dp),
         )
         TextLink("삭제", onDelete, danger = true)
         }
