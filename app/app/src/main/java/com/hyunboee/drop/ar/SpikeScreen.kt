@@ -123,8 +123,6 @@ import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.ar.ARSceneView
-import io.github.sceneview.ar.createARCameraStream
-import io.github.sceneview.ar.rememberARCameraStream
 import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
@@ -516,9 +514,6 @@ fun SpikeScreen(api: ApiClient, navTarget: MapPin?, onHome: () -> Unit, onMap: (
             engine = engine,
             materialLoader = materialLoader,
             planeRenderer = true,
-            // 손 같은 실제 물체가 캡슐 앞에 있으면 캡슐이 가려지게 한다(깊이 가림). 깊이를 못 읽는 기기에서는 저절로 꺼진다
-            depthMode = Config.DepthMode.AUTOMATIC,
-            cameraStream = rememberARCameraStream(materialLoader, creator = { createARCameraStream(materialLoader).apply { isDepthOcclusionEnabled = true } }),
             cloudAnchorMode = Config.CloudAnchorMode.ENABLED,
             flashMode = if (torch) Config.FlashMode.TORCH else Config.FlashMode.OFF,
             onSessionCreated = {

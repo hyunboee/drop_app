@@ -5,6 +5,9 @@ package com.hyunboee.drop
 // M-10 비밀번호 최소 길이
 const val M_10_PASSWORD_MIN_LENGTH = 8
 
+// 구글 로그인: 서버가 ID 토큰을 확인할 웹 클라이언트 ID (구글 클라우드 "Drop server (Google sign-in)")
+const val GOOGLE_WEB_CLIENT_ID = "1017224651327-ove88h8gmfp6svjqid64nr99b0nahdof.apps.googleusercontent.com"
+
 // M-07 썸네일 긴 변(px)
 const val M_07_THUMB_LONG_SIDE_PX = 320
 

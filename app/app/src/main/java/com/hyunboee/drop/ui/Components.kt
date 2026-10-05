@@ -53,6 +53,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import com.hyunboee.drop.R
 
 // docs/9-style-guide.md 3~4장의 화면 틀과 컴포넌트. 웹(frontend/src/components)과 같은 모양이다.
@@ -154,6 +155,22 @@ fun PrimaryButton(text: String, onClick: () -> Unit, enabled: Boolean = true, lo
             // 자간 0.6em만큼 오른쪽으로 치우치므로 왼쪽에 같은 만큼 들여 가운데를 맞춘다
             Text(text, style = Tokens.Button, color = Tokens.TextOnGold, modifier = Modifier.padding(start = 8.dp))
         }
+    }
+}
+
+// 보조 버튼 (4.1): 주요 버튼과 같은 크기, 바탕 없이 금색 테두리 1px
+@Composable
+fun SecondaryButton(text: String, onClick: () -> Unit, enabled: Boolean = true) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .alpha(if (enabled) 1f else 0.4f)
+            .border(1.dp, Tokens.Gold500)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, style = Tokens.Button.copy(letterSpacing = 0.1.em), color = Tokens.Gold300)
     }
 }
 

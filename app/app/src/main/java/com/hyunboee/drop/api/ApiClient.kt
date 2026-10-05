@@ -70,6 +70,38 @@ class ApiClient(
         }
     }
 
+    // 서버의 파일(앱 업데이트 설치 파일)을 dest에 받는다. onProgress는 0~100
+    suspend fun download(path: String, dest: java.io.File, onProgress: (Int) -> Unit) = withContext(Dispatchers.IO) {
+        val failed = ApiException("DOWNLOAD_FAILED", "내려받지 못했어요", 0)
+        try {
+            val conn = URL(baseUrl + path).openConnection() as HttpURLConnection
+            try {
+                conn.connectTimeout = 10_000
+                conn.readTimeout = 30_000
+                if (conn.responseCode != 200) throw failed
+                val total = conn.contentLengthLong
+                dest.parentFile?.mkdirs()
+                var done = 0L
+                conn.inputStream.use { input ->
+                    dest.outputStream().use { out ->
+                        val buf = ByteArray(64 * 1024)
+                        while (true) {
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            out.write(buf, 0, n)
+                            done += n
+                            if (total > 0) onProgress((done * 100 / total).toInt())
+                        }
+                    }
+                }
+            } finally {
+                conn.disconnect()
+            }
+        } catch (e: IOException) {
+            throw failed
+        }
+    }
+
     // 본문이 없는 응답(204)은 null을 돌려준다
     suspend fun request(method: String, path: String, body: JSONObject? = null): JSONObject? = withContext(Dispatchers.IO) {
         val conn = try {

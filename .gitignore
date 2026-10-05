@@ -161,3 +161,6 @@ app/local.properties
 
 # 나눠 줄 설치 파일
 share/
+
+# 앱 자체 업데이트용 설치 파일(올릴 때 publish_update.py가 만든다)
+backend/updates/

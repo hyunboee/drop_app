@@ -10,6 +10,8 @@ sceneview = "4.52.0"
 playServicesAuth = "22.0.0"
 junit = "4.13.2"
 json = "20240303"
+credentials = "1.5.0"
+googleid = "1.1.1"
 osmdroid = "6.1.20"
 
 [libraries]
@@ -22,6 +24,9 @@ sceneview-ar = { module = "io.github.sceneview:arsceneview", version.ref = "scen
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
 json = { module = "org.json:json", version.ref = "json" }
 osmdroid = { module = "org.osmdroid:osmdroid-android", version.ref = "osmdroid" }
+credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
+credentials-play = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
+googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]

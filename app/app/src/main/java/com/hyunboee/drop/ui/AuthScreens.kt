@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,7 +25,9 @@ import androidx.compose.ui.text.style.TextDecoration
 import com.hyunboee.drop.M_10_PASSWORD_MIN_LENGTH
 import com.hyunboee.drop.api.ApiException
 import com.hyunboee.drop.api.DEFAULT_MESSAGE
+import com.hyunboee.drop.auth.GoogleResult
 import com.hyunboee.drop.auth.Session
+import com.hyunboee.drop.auth.googleIdToken
 import com.hyunboee.drop.lib.canSignup
 import kotlinx.coroutines.launch
 
@@ -36,6 +40,8 @@ fun LoginScreen(session: Session, onSignup: () -> Unit) {
     var email by remember { mutableStateOf(saved?.first ?: "") }
     var password by remember { mutableStateOf(saved?.second ?: "") }
     var keepLogin by remember { mutableStateOf(saved != null) }
+    val context = LocalContext.current
+    var googleToken by remember { mutableStateOf<String?>(null) } // 처음 오는 구글 계정이라 약관 동의를 받는 중인 토큰
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
 
@@ -62,13 +68,76 @@ fun LoginScreen(session: Session, onSignup: () -> Unit) {
             enabled = email.isNotBlank() && password.isNotEmpty(),
             loading = busy,
         )
+        // 폰에 로그인된 구글 계정을 골라 바로 연결한다
+        SecondaryButton(
+            "Google로 계속하기",
+            onClick = {
+                busy = true
+                error = null
+                scope.launch {
+                    try {
+                        when (val r = googleIdToken(context)) {
+                            is GoogleResult.Token -> try {
+                                session.googleLogin(r.idToken, false)
+                            } catch (e: ApiException) {
+                                if (e.code == "CONSENT_REQUIRED") googleToken = r.idToken else error = e.message ?: DEFAULT_MESSAGE
+                            }
+                            is GoogleResult.Failed -> error = r.message
+                            GoogleResult.Cancelled -> {}
+                        }
+                    } finally {
+                        busy = false
+                    }
+                }
+            },
+            enabled = !busy,
+        )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
             Text("계정이 없나요?", style = Tokens.Link.copy(textDecoration = TextDecoration.None), color = Tokens.TextSub)
             Spacer(Modifier.size(Tokens.Space1))
             TextLink("가입하기", onSignup)
         }
     }
+
+    // 처음 Google로 오는 계정은 가입 때와 같은 동의 3개를 받는다
+    googleToken?.let { token ->
+        var terms by remember { mutableStateOf(false) }
+        var location by remember { mutableStateOf(false) }
+        var age by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { googleToken = null },
+            title = { Text("처음 오셨네요") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Tokens.Space3)) {
+                    DropCheckbox("이용약관·개인정보 처리 동의", terms, { terms = it })
+                    DropCheckbox("위치정보 이용 동의", location, { location = it })
+                    DropCheckbox("만 14세 이상입니다", age, { age = it })
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = terms && location && age && !busy,
+                    onClick = {
+                        googleToken = null
+                        busy = true
+                        error = null
+                        scope.launch {
+                            try {
+                                session.googleLogin(token, true)
+                            } catch (e: ApiException) {
+                                error = e.message ?: DEFAULT_MESSAGE
+                            } finally {
+                                busy = false
+                            }
+                        }
+                    },
+                ) { Text("동의하고 계속") }
+            },
+            dismissButton = { TextButton(onClick = { googleToken = null }) { Text("취소") } },
+        )
+    }
 }
+
 
 // NW-02 회원가입 (W-02: "‹ 로그인", 밑줄 입력란 2개, 체크박스 3개, 오류 문구, 주요 버튼)
 @Composable

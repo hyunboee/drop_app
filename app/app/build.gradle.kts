@@ -11,8 +11,9 @@ android {
         applicationId = "com.hyunboee.drop"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        // 새 버전을 낼 때마다 -PappVersionCode=N(이전보다 크게) -PappVersionName=x.y.z 를 준다. 앱 자체 업데이트가 이 번호로 새 버전인지 본다
+        versionCode = (findProperty("appVersionCode") as String?)?.toInt() ?: 1
+        versionName = (findProperty("appVersionName") as String?) ?: "0.1.0"
         // 폰(arm64)용 네이티브 라이브러리만 넣는다
         ndk { abiFilters += "arm64-v8a" }
     }
@@ -25,6 +26,7 @@ android {
             dimension = "env"
             applicationIdSuffix = ".home"
             resValue("string", "app_name", "Drop 집")
+            buildConfigField("boolean", "IN_APP_UPDATE", "false") // 집 앱은 adb로 설치한다
             buildConfigField("String", "API_BASE_URL", "\"http://localhost:3000\"")
         }
         // 밖: 터널 주소(인터넷)로 붙는다. 빌드할 때 -PapiBaseUrl=https://....trycloudflare.com 을 준다.
@@ -32,6 +34,7 @@ android {
         create("outdoor") {
             dimension = "env"
             resValue("string", "app_name", "Drop 밖")
+            buildConfigField("boolean", "IN_APP_UPDATE", "true") // 앱 안에서 업데이트를 받는다
             buildConfigField("String", "API_BASE_URL", "\"${providers.gradleProperty("apiBaseUrl").getOrElse("https://set-apiBaseUrl.invalid")}\"")
         }
     }
@@ -68,6 +71,10 @@ dependencies {
     implementation(libs.play.services.auth)
     // 내 캡슐 지도(NW-19). OpenStreetMap 타일을 써서 API 키가 필요 없다
     implementation(libs.osmdroid)
+    // Google로 로그인(폰에 로그인된 구글 계정을 골라 바로 연결)
+    implementation(libs.credentials)
+    implementation(libs.credentials.play)
+    implementation(libs.googleid)
 
     testImplementation(libs.junit)
     // JVM 단위 테스트에서 org.json을 실제로 돌리기 위한 것 (Android에는 기본 포함)

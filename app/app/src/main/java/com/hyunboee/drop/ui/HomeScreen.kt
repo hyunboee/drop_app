@@ -77,7 +77,7 @@ class HomeData {
 
 // NW-16 홈(관리 화면)과 NW-17 보관함. 로그인 뒤 첫 화면이며 여기서 AR 카메라로 들어간다
 @Composable
-fun Home(api: ApiClient, email: String, data: HomeData, startOnMap: Boolean, onOpenAr: (MapPin?) -> Unit, onLogout: () -> Unit) {
+fun Home(api: ApiClient, email: String, data: HomeData, onCheckUpdate: (() -> Unit)?, startOnMap: Boolean, onOpenAr: (MapPin?) -> Unit, onLogout: () -> Unit) {
     val mine = data.mine
     val archive = data.archive
     var error by remember { mutableStateOf<String?>(null) }
@@ -140,7 +140,7 @@ fun Home(api: ApiClient, email: String, data: HomeData, startOnMap: Boolean, onO
             BackHandler { showArchive = false }
             ArchiveScreen(api, archive, onBack = { showArchive = false }, onView = { viewing = it })
         }
-        else -> HomeScreen(api, email, mine, archive, error, { onOpenAr(null) }, onLogout, onArchive = { showArchive = true }, onMap = { showMap = true }, onView = { viewing = it }, onDelete = { deleting = it })
+        else -> HomeScreen(api, email, mine, archive, error, { onOpenAr(null) }, onLogout, onCheckUpdate, onArchive = { showArchive = true }, onMap = { showMap = true }, onView = { viewing = it }, onDelete = { deleting = it })
     }
 }
 
@@ -153,6 +153,7 @@ private fun HomeScreen(
     error: String?,
     onOpenAr: () -> Unit,
     onLogout: () -> Unit,
+    onCheckUpdate: (() -> Unit)?,
     onArchive: () -> Unit,
     onMap: () -> Unit,
     onView: (OpenedCapsule) -> Unit,
@@ -211,7 +212,10 @@ private fun HomeScreen(
                 }
             }
 
-            Box(Modifier.fillMaxWidth().padding(bottom = Tokens.Space4), contentAlignment = Alignment.Center) { TextLink("로그아웃", onLogout) }
+            Column(Modifier.fillMaxWidth().padding(bottom = Tokens.Space4), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Tokens.Space2)) {
+                if (onCheckUpdate != null) TextLink("업데이트 확인 · 현재 v${com.hyunboee.drop.BuildConfig.VERSION_NAME}", onCheckUpdate)
+                TextLink("로그아웃", onLogout)
+            }
         }
 
         // 화면 아래에 고정된 동작: 지도(보조)와 AR 카메라(주요)
