@@ -11,6 +11,7 @@
 | 0.3 | 2026-10-01 | Claude Code | 문서 정합성 점검: 출처 문서 버전을 최신(도메인 v0.8, PRD v0.8, 시나리오 v0.4, 와이어프레임 v0.4, 원칙 v0.4, 아키텍처 v0.3)으로 갱신 |
 | 0.4 | 2026-10-02 | Claude Code | 프레임 방향 회전(PRD v1.2 Q-14): `capsules.heading`의 의미를 드롭 시 기기 방향에서 프레임 앞면이 바라보는 방위로 변경. 타입·제약·DDL은 그대로 |
 | 0.7 | 2026-10-04 | Claude Code | 실증에서 정한 크기 저장(`13-capsule-dev-plan.md` 17장): 1.7 추가. `capsules.size_m`과 마이그레이션 `003` DDL, 결정 E13(회전은 `heading` 재사용, 결제 관련 컬럼은 N3) |
+| 0.8 | 2026-10-04 | Claude Code | Google 로그인: 1.8 추가(`users.google_sub`, 비밀번호 컬럼 NULL 허용, 마이그레이션 `005`), 결정 E14 |
 | 0.6 | 2026-10-04 | Claude Code | 캡슐 디벨롭 기획(`13-capsule-dev-plan.md`) 대조: 1.4 인덱스가 주변 조회의 `opened` 계산(BE-17)에도 쓰임을 명시, 결정 E12(N1.5는 DB 변경 없음, `model_kind` 미도입). 2부의 프라이빗·개봉 날짜·영상·상점 스키마는 결정 전이라 반영하지 않는다 |
 | 0.5 | 2026-10-03 | Claude Code | 네이티브 N1(네이티브 PRD v0.3): 1.6 추가. `capsules.cloud_anchor_id`·`geo_pose`, `view_records.plane_match`와 마이그레이션 `002` DDL, 결정 E9~E11. `schema.sql`은 `001`의 원본이라 바꾸지 않는다 |
 
@@ -207,6 +208,26 @@ ALTER TABLE capsules
 
 ---
 
+### 1.8 Google 로그인 (마이그레이션 005)
+
+| 테이블 | 변경 | 근거 |
+|---|---|---|
+| users | `google_sub text UNIQUE` 추가 (구글이 주는 사용자 고유 번호) | FR-N16 |
+| users | `password_salt`, `password_hash`를 NULL 허용으로 변경 | 구글로만 가입한 사용자는 비밀번호가 없다 |
+| users | CHECK `password_hash IS NOT NULL OR google_sub IS NOT NULL` | 로그인 방법이 하나는 있어야 한다 |
+
+```sql
+-- 005_google_login.sql
+ALTER TABLE users
+  ALTER COLUMN password_salt DROP NOT NULL,
+  ALTER COLUMN password_hash DROP NOT NULL,
+  ADD COLUMN google_sub text UNIQUE;
+ALTER TABLE users
+  ADD CONSTRAINT users_login_method_check CHECK (password_hash IS NOT NULL OR google_sub IS NOT NULL);
+```
+
+---
+
 ## 2. 후속 단계 개념 ERD
 
 도메인 정의서 5장 애그리거트(INV-01~10) 기준의 **개념 모델**이다. 엔티티와 관계, 키와 핵심 속성 몇 개만 적었고, **실제 테이블·컬럼·타입·인덱스 설계는 하지 않는다.** 실제 설계는 해당 FR을 구현할 때(FR-12, 네이티브 전환 Q-01) 별도로 한다(P-02).
@@ -343,3 +364,4 @@ v0.1의 확인 필요 8건을 아래와 같이 결정했다.
 | E11 | `schema.sql` (v0.5) | 바꾸지 않는다. `001_init.sql`과 바이트 단위로 같아야 하는 테스트가 있다. `002`의 원본은 1.6이다 | 1.6, `8-plan.md` DB-03 |
 | E12 | N1.5(3D 캡슐 연출)의 스키마 (v0.6) | 변경 없음. 원본 기획의 `capsules.model_kind`는 값이 하나뿐이라 넣지 않고(P-02), 사용자가 모델을 고르는 상점 단계에서 CHECK와 함께 추가한다. `opened`는 저장하지 않고 조회 때 계산한다 | 1.4, `13-capsule-dev-plan.md` 8장·CQ-05 |
 | E13 | 캡슐 크기 저장 (v0.7) | `size_m` 한 컬럼. 회전은 `heading` 재사용, 비율은 썸네일에서 얻는다. 결제·등급 관련 컬럼은 값이 쓰이는 N3에 추가한다(P-02) | 1.7, `13-capsule-dev-plan.md` 17.4 |
+| E14 | Google 계정과 기존 계정 합치기 (v0.8) | 같은 이메일이면 **자동으로 연결**한다(구글이 이메일을 확인해 준 계정만 믿는다). 별개 계정으로 두려면 이 규칙을 바꿔야 한다. 사용자 결정 대기 | 1.8, 네이버·카카오 NQ-17 |

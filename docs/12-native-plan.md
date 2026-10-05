@@ -7,6 +7,7 @@
 | 버전 | 일자 | 변경자 | 변경내용 |
 |---|---|---|---|
 | 0.1 | 2026-10-03 | Claude Code | 초안 작성 |
+| 0.9 | 2026-10-04 | Claude Code | APP-16 Google 로그인 추가 |
 | 0.8 | 2026-10-04 | Claude Code | APP-15 지도의 보는 방향 표시와 AR 길찾기 추가(네이티브 PRD v1.0) |
 | 0.7 | 2026-10-04 | Claude Code | APP-14 내 캡슐 지도 추가(네이티브 PRD v0.9, osmdroid) |
 | 0.6 | 2026-10-04 | Claude Code | APP-13 홈·보관함 추가(네이티브 PRD v0.8). 실증 화면을 임시 AR 화면으로 유지(결정 #7), 홈을 로그인 뒤 첫 화면으로(결정 #8) |
@@ -104,6 +105,7 @@ flowchart LR
   BE19["BE-19"] --> APP13
   APP13 --> APP14["APP-14"]
   APP14 --> APP15["APP-15"]
+  APP02 --> APP16["APP-16"]
   BE16 --> APP12
   APP12 --> OPSN03["OPS-N03"]
   APP06 --> OPSN03
@@ -149,6 +151,7 @@ flowchart LR
 | APP-13 | 홈·보관함 | APP-02, BE-19 | P0 |
 | APP-14 | 내 캡슐 지도 | APP-13 | P1 |
 | APP-15 | 보는 방향 표시·AR 길찾기 | APP-14 | P1 |
+| APP-16 | Google 로그인 | APP-02, `8-plan.md` BE-20 | P1 |
 | OPS-N03 | 실기기 현장 테스트 (KPI) | APP-12, APP-06, `8-plan.md` OPS-02 | P0 |
 
 ---
@@ -477,6 +480,20 @@ DB-03, BE-14, BE-15, BE-16의 상세와 완료 조건은 `8-plan.md` 6.1·6.2에
 - **선행 Task:** APP-14
 - **관련 ID:** FR-N14, FR-N15, NW-19, NW-20, NP-11, NQ-15
 
+#### APP-16 Google 로그인
+
+- **목표:** 로그인 화면에서 폰에 로그인된 Google 계정으로 바로 로그인한다(FR-N16).
+- **수행 작업**
+  - Credential Manager와 구글 ID(`androidx.credentials`, `googleid`) 의존성. `auth/GoogleSignIn.kt`: 계정 선택 창을 띄우고 ID 토큰을 받는다(취소, 계정 없음, 실패를 구분).
+  - `Session.googleLogin`, 로그인 화면의 "Google로 계속하기" 버튼, 처음 오는 계정(서버가 CONSENT_REQUIRED)에게 동의 3개 창.
+  - 구글 클라우드: 웹 OAuth 클라이언트 `Drop server (Google sign-in)` 생성(서버가 토큰 대상 확인), 안드로이드 클라이언트는 집·밖 패키지 둘 다 등록, 테스트 사용자 추가.
+- **완료 조건**
+  - [ ] 실기기: "Google로 계속하기"를 누르면 폰의 구글 계정 선택 창이 뜬다
+  - [ ] 실기기: 계정을 고르면 처음이면 동의 창 뒤에, 이미 가입했으면 바로 홈으로 간다
+  - [ ] 실기기: 같은 이메일로 이미 가입한 계정이면 그 계정(내 캡슐)으로 로그인된다
+- **선행 Task:** APP-02, BE-20
+- **관련 ID:** FR-N16, NQ-16
+
 ---
 
 ## 7. 후속 단계 (계획 제외)
@@ -501,3 +518,4 @@ N1 다음 단계인 N1.5(3D 캡슐 연출)의 요구사항과 일정은 `13-caps
 | 8 | 로그인 뒤 첫 화면 (2026-10-04) | 홈(NW-16)이다. 권한 화면(APP-03)은 "AR 카메라 열기" 뒤로 옮긴다. 앱 사진 캐시(APP-12)가 생기기 전까지 홈·보관함은 들어올 때마다 사진을 다시 받는다 | APP-13, APP-03 |
 | 9 | 서버 캡슐 AR 표시 (2026-10-04) | "완료" 때 캡슐 자리를 클라우드 앵커로 자동 저장하고 그 ID·크기와 함께 서버에 게시한다. AR 화면은 켜져 있는 동안 주변 서버 캡슐을 15초마다 받아 가까운 순서로 30개까지 앵커를 찾아 띄운다(자리를 못 찾은 것은 그 자리를 비추면 나타난다). 실험용 "자리 저장"·"저장한 자리 찾기" 버튼과 폰 저장 앵커 ID는 없앴다. 서버에 앵커 없이 저장된 캡슐은 홈·지도에만 보인다 | APP-07~11 일부 |
 | 10 | 앱 두 가지(flavor) (2026-10-04) | **Drop 집**(`com.hyunboee.drop.home`, 서버 localhost + adb reverse)과 **Drop 밖**(`com.hyunboee.drop`, 터널 주소)을 한 폰에 함께 설치한다. 밖 앱은 기존 패키지 이름이라 클라우드 앵커 인증이 맞고, 집 앱은 새 패키지 이름이라 구글 클라우드에 OAuth 클라이언트 `Drop home debug`(Android, 패키지 `com.hyunboee.drop.home`, 같은 디버그 SHA-1)를 2026-10-04에 등록했다(반영에 몇 분이 걸릴 수 있다). 빌드: `gradlew assembleHomeDebug`, `assembleOutdoorDebug -PapiBaseUrl=터널주소`. 아이콘은 사용자가 준 이미지 | OPS-N01 |
+| 11 | 밖 앱의 앱 자체 업데이트 (2026-10-04) | 서버 `backend/updates/`에 설치 파일(`drop-outdoor.apk`)과 `latest.json`(버전, 변경사항, sha256)을 두고, 서버의 `GET /api/app/latest`(정보)·`/api/app/download`(파일, 로그인 없이)로 내려준다. 밖 앱(`IN_APP_UPDATE=true`)은 켤 때와 홈의 "업데이트 확인"에서 새 버전(versionCode가 더 큼)을 찾으면 안내 창 → 내려받기(sha256 확인) → 설치 화면으로 넘긴다. 설치 버튼은 사용자가 눌러야 하고, 처음 한 번 "출처를 알 수 없는 앱 설치"를 허용해야 한다. 새 버전 내기: `gradlew assembleOutdoorRelease -PapiBaseUrl=터널주소 -PappVersionCode=N -PappVersionName=x.y.z` 후 `python app/tools/publish_update.py <apk> N x.y.z "변경사항"`. 서버를 다시 켜지 않아도 바로 적용된다. 집 앱은 대상이 아니다 | OPS-N01, `8-plan.md` 결정 #18 |
