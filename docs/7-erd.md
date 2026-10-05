@@ -12,6 +12,7 @@
 | 0.4 | 2026-10-02 | Claude Code | 프레임 방향 회전(PRD v1.2 Q-14): `capsules.heading`의 의미를 드롭 시 기기 방향에서 프레임 앞면이 바라보는 방위로 변경. 타입·제약·DDL은 그대로 |
 | 0.7 | 2026-10-04 | Claude Code | 실증에서 정한 크기 저장(`13-capsule-dev-plan.md` 17장): 1.7 추가. `capsules.size_m`과 마이그레이션 `003` DDL, 결정 E13(회전은 `heading` 재사용, 결제 관련 컬럼은 N3) |
 | 0.8 | 2026-10-04 | Claude Code | Google 로그인: 1.8 추가(`users.google_sub`, 비밀번호 컬럼 NULL 허용, 마이그레이션 `005`), 결정 E14 |
+| 0.9 | 2026-10-06 | Claude Code | 1.9 추가: 등급 DIAMOND(CHECK 변경, `expires_at = infinity`), `blocks`·`reports` 테이블(마이그레이션 006), 결정 E15~E16. 004(실버 허용)는 1.9에 포함해 설명 |
 | 0.6 | 2026-10-04 | Claude Code | 캡슐 디벨롭 기획(`13-capsule-dev-plan.md`) 대조: 1.4 인덱스가 주변 조회의 `opened` 계산(BE-17)에도 쓰임을 명시, 결정 E12(N1.5는 DB 변경 없음, `model_kind` 미도입). 2부의 프라이빗·개봉 날짜·영상·상점 스키마는 결정 전이라 반영하지 않는다 |
 | 0.5 | 2026-10-03 | Claude Code | 네이티브 N1(네이티브 PRD v0.3): 1.6 추가. `capsules.cloud_anchor_id`·`geo_pose`, `view_records.plane_match`와 마이그레이션 `002` DDL, 결정 E9~E11. `schema.sql`은 `001`의 원본이라 바꾸지 않는다 |
 
@@ -228,6 +229,25 @@ ALTER TABLE users
 
 ---
 
+### 1.9 등급과 안전 기능 (마이그레이션 004, 006)
+
+| 대상 | 변경 | 근거 |
+|---|---|---|
+| capsules.grade | CHECK를 `'BRONZE'`만에서 `IN ('BRONZE', 'SILVER', 'DIAMOND')`로 넓힌다 (004에서 실버, 006에서 다이아) | 등급 개편(`13-capsule-dev-plan.md` 19장) |
+| capsules.expires_at | 다이아는 `'infinity'`(평생). 조회 조건 `expires_at > now()`는 그대로 쓴다. 서버 응답에서는 null | 19.1 |
+| blocks | `(blocker_id, blocked_id)` PK, 서로 다른 사용자, ON DELETE CASCADE. 차단한 사람에게만 상대 캡슐이 숨겨진다 | FR-N17 |
+| reports | `id`, `reporter_id`, `capsule_id`, `reason`(ABUSE·SEXUAL·VIOLENCE·PRIVACY·COPYRIGHT·OTHER), `detail`(500자 이내), `UNIQUE (reporter_id, capsule_id)`. 신고한 사람에게는 그 캡슐이 숨겨지고 운영자가 이 표를 보고 검토한다 | FR-N17 |
+
+```sql
+-- 006_grades_safety.sql (요약)
+ALTER TABLE capsules DROP CONSTRAINT capsules_grade_check;
+ALTER TABLE capsules ADD CONSTRAINT capsules_grade_check CHECK (grade IN ('BRONZE', 'SILVER', 'DIAMOND'));
+CREATE TABLE blocks (blocker_id uuid, blocked_id uuid, created_at timestamptz DEFAULT now(), PRIMARY KEY (blocker_id, blocked_id), CHECK (blocker_id <> blocked_id));
+CREATE TABLE reports (id uuid PRIMARY KEY, reporter_id uuid, capsule_id uuid, reason text, detail text, created_at timestamptz DEFAULT now(), UNIQUE (reporter_id, capsule_id));
+```
+
+---
+
 ## 2. 후속 단계 개념 ERD
 
 도메인 정의서 5장 애그리거트(INV-01~10) 기준의 **개념 모델**이다. 엔티티와 관계, 키와 핵심 속성 몇 개만 적었고, **실제 테이블·컬럼·타입·인덱스 설계는 하지 않는다.** 실제 설계는 해당 FR을 구현할 때(FR-12, 네이티브 전환 Q-01) 별도로 한다(P-02).
@@ -365,3 +385,5 @@ v0.1의 확인 필요 8건을 아래와 같이 결정했다.
 | E12 | N1.5(3D 캡슐 연출)의 스키마 (v0.6) | 변경 없음. 원본 기획의 `capsules.model_kind`는 값이 하나뿐이라 넣지 않고(P-02), 사용자가 모델을 고르는 상점 단계에서 CHECK와 함께 추가한다. `opened`는 저장하지 않고 조회 때 계산한다 | 1.4, `13-capsule-dev-plan.md` 8장·CQ-05 |
 | E13 | 캡슐 크기 저장 (v0.7) | `size_m` 한 컬럼. 회전은 `heading` 재사용, 비율은 썸네일에서 얻는다. 결제·등급 관련 컬럼은 값이 쓰이는 N3에 추가한다(P-02) | 1.7, `13-capsule-dev-plan.md` 17.4 |
 | E14 | Google 계정과 기존 계정 합치기 (v0.8) | 같은 이메일이면 **자동으로 연결**한다(구글이 이메일을 확인해 준 계정만 믿는다). 별개 계정으로 두려면 이 규칙을 바꿔야 한다. 사용자 결정 대기 | 1.8, 네이버·카카오 NQ-17 |
+| E15 | 신고의 효과 (v0.9) | 신고한 사람에게만 즉시 숨기고, 여러 건이 쌓여도 자동으로 지우지 않는다. 운영자가 `reports`를 보고 삭제한다. 자동 숨김 기준(몇 건)은 운영하며 정한다 | 1.9 |
+| E16 | 차단 대상 지정 (v0.9) | 앱은 다른 사람의 ID를 모르므로 "이 캡슐을 남긴 사람"으로 차단한다. 차단 목록에는 일부만 가린 이메일(h***@gmail.com)을 보인다 | 1.9 |

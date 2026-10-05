@@ -10,20 +10,20 @@
 
 | 문서 | 내용 |
 |---|---|
-| [1-domain-definition.md](docs/1-domain-definition.md) | 도메인 정의서 (v1.1). 액터, 바운디드 컨텍스트, 유비쿼터스 언어, 애그리거트·불변식(INV), 운영 파라미터(PRM, 수치의 단일 출처), 현장 증명 판정, 캡슐 생명주기, 비즈니스 규칙(BR), 재화·정산(ST)·인앱결제(IAP)·개인정보(PRV) 정책, 도메인 이벤트(EV), 리스크(RISK), 결정 사항(OQ) |
+| [1-domain-definition.md](docs/1-domain-definition.md) | 도메인 정의서 (v1.2). 액터, 바운디드 컨텍스트, 유비쿼터스 언어, 애그리거트·불변식(INV), 운영 파라미터(PRM, 수치의 단일 출처), 현장 증명 판정, 캡슐 생명주기, 비즈니스 규칙(BR), 재화·정산(ST)·인앱결제(IAP)·개인정보(PRV) 정책, 도메인 이벤트(EV), 리스크(RISK), 결정 사항(OQ) |
 | [2-PRD.md](docs/2-PRD.md) | 제품 요구사항 정의서 (v1.2). 목표·KPI, 목표 사용자, MVP 범위(In/Out), 기능 요구사항(FR), MVP 파라미터(M), 비기능 요구사항(NFR), 기술 제약, UX 원칙, 2일 일정, 결정 사항(Q) |
 | [3-user-scenario.md](docs/3-user-scenario.md) | 사용자 시나리오 (v0.6). MVP 시나리오 SC-01~07, 후속 단계 시나리오 SC-08~17, 공백 G-01~20 해소 내역 |
 | [4-wireframes.md](docs/4-wireframes.md) | MVP 와이어프레임 (v0.7). 화면 목록, 화면 흐름도, 화면별 ASCII 와이어프레임 W-01~13, 후속 단계 화면 목록, 결정 내역 |
 | [5-project-principle.md](docs/5-project-principle.md) | 프로젝트 구조 설계 원칙 (v0.7). 최상위 원칙(P), 의존성·레이어, 코드·네이밍(DB·API·에러 코드), 테스트·품질(커버리지 90%), 설정·보안·운영(쿠키 세션, 미디어 프록시, 배포), frontend/·backend/ 디렉토리 구조, 결정 내역 |
 | [6-arch-diagram.md](docs/6-arch-diagram.md) | 기술 아키텍처 다이어그램 (v0.6). MVP 시스템 아키텍처(브라우저, Cloudflare, EC2 Express, RDS PostgreSQL, S3, Rekognition), 캡슐 드롭·열람 판정·미디어 프록시 로직 다이어그램, 후속 구성 요소, 결정 내역 |
-| [7-erd.md](docs/7-erd.md) | ERD (v0.8). MVP 물리 ERD(users, sessions, capsules, view_records)와 컬럼·제약·인덱스, 운영용 테이블, 네이티브 N1 변경(마이그레이션 002), 후속 단계 개념 ERD, 결정 내역 |
-| [8-plan.md](docs/8-plan.md) | 실행 계획 (v1.2). Task 42개(OPS·DB·BE·FE, 네이티브 N1의 DB-03·BE-14~16과 N1.5의 BE-17 포함)의 수행 작업, 체크박스 완료 조건, 선행 Task, 의존 관계 다이어그램, 2일 일정 배치, 결정 내역. `/develop-backend`·`/develop-frontend` 스킬이 Task ID로 참조 |
+| [7-erd.md](docs/7-erd.md) | ERD (v0.9). MVP 물리 ERD(users, sessions, capsules, view_records)와 컬럼·제약·인덱스, 운영용 테이블, 네이티브 N1 변경(마이그레이션 002), 후속 단계 개념 ERD, 결정 내역 |
+| [8-plan.md](docs/8-plan.md) | 실행 계획 (v1.3). Task 42개(OPS·DB·BE·FE, 네이티브 N1의 DB-03·BE-14~16과 N1.5의 BE-17 포함)의 수행 작업, 체크박스 완료 조건, 선행 Task, 의존 관계 다이어그램, 2일 일정 배치, 결정 내역. `/develop-backend`·`/develop-frontend` 스킬이 Task ID로 참조 |
 | [schema.sql](docs/schema.sql) | MVP DB 생성 DDL (PostgreSQL 17). `backend/db/migrations/001_init.sql`의 원본 |
 | [9-style-guide.md](docs/9-style-guide.md) | 스타일 가이드 (v0.3). W-01 확정 시안(흙 속 타임캡슐) 기준 색상·간격·타이포 토큰(CSS 변수), 버튼·입력란·바텀시트·배너·안내·FAB·AR 프레임 규칙, W-01~W-12 적용표 |
-| [10-native-PRD.md](docs/10-native-PRD.md) | 네이티브 전환 PRD N1 (v1.1, 확정, Android: Kotlin + ARCore SDK + SceneView). 전환 배경(웹 실기기 테스트 결과), N1 범위(In/Out), 기능 요구사항(FR-N), 네이티브 파라미터(NP), 비기능 요구사항(NFR-N), 기술 제약과 백엔드 변경, 일정, 결정 필요 항목(NQ), 리스크(RISK-N), 이후 단계, 외부 조건 검증 근거(V) |
+| [10-native-PRD.md](docs/10-native-PRD.md) | 네이티브 전환 PRD N1 (v1.2, 확정, Android: Kotlin + ARCore SDK + SceneView). 전환 배경(웹 실기기 테스트 결과), N1 범위(In/Out), 기능 요구사항(FR-N), 네이티브 파라미터(NP), 비기능 요구사항(NFR-N), 기술 제약과 백엔드 변경, 일정, 결정 필요 항목(NQ), 리스크(RISK-N), 이후 단계, 외부 조건 검증 근거(V) |
 | [11-native-wireframes.md](docs/11-native-wireframes.md) | 네이티브 와이어프레임 N1 (v0.4). 화면 목록 NW-01~20(웹과 같은 화면은 W-xx 참조), 화면 흐름도, 바뀌거나 새로 생긴 화면의 ASCII 와이어프레임(권한 요청, 사용 불가 안내, AR 뷰, 평면 찾기, 프레임 놓기, 주변 스캔), 결정 내역 |
-| [12-native-plan.md](docs/12-native-plan.md) | 네이티브 실행 계획 N1 (v0.9). 앱(APP-01~16)·운영(OPS-N01~04) Task의 수행 작업, 체크박스 완료 조건(JVM 단위 테스트 + 실기기 체크리스트), 선행 Task, 의존 관계, 주차 배치, `app/` 폴더 구조, 결정 내역. 백엔드 Task는 `8-plan.md` |
-| [13-capsule-dev-plan.md](docs/13-capsule-dev-plan.md) | 캡슐 디벨롭 기획 (v0.2, 초안). 1부 N1.5 3D 캡슐 연출(FR-C, 파라미터 CP, 화면 CW, NFR-C, 백엔드 변경, 결정 항목 CQ, 리스크), 2부 캡슐 확장 로드맵(프라이빗 캡슐, 열리는 날짜, 음성·영상, 꾸미기 상점)과 장별 "기존 문서와의 차이", 단계별 검증 지표, 미룬 아이디어, 결정 필요 항목(DQ), 원본 기획 대비 바로잡은 사실 |
+| [12-native-plan.md](docs/12-native-plan.md) | 네이티브 실행 계획 N1 (v1.0). 앱(APP-01~19)·운영(OPS-N01~04) Task의 수행 작업, 체크박스 완료 조건(JVM 단위 테스트 + 실기기 체크리스트), 선행 Task, 의존 관계, 주차 배치, `app/` 폴더 구조, 결정 내역. 백엔드 Task는 `8-plan.md` |
+| [13-capsule-dev-plan.md](docs/13-capsule-dev-plan.md) | 캡슐 디벨롭 기획 (v0.3, 초안, 19장 등급 개편 포함). 1부 N1.5 3D 캡슐 연출(FR-C, 파라미터 CP, 화면 CW, NFR-C, 백엔드 변경, 결정 항목 CQ, 리스크), 2부 캡슐 확장 로드맵(프라이빗 캡슐, 열리는 날짜, 음성·영상, 꾸미기 상점)과 장별 "기존 문서와의 차이", 단계별 검증 지표, 미룬 아이디어, 결정 필요 항목(DQ), 원본 기획 대비 바로잡은 사실 |
 
 # 코딩 행동 지침
 

@@ -13,6 +13,7 @@
 | 0.5 | 2026-10-02 | Claude Code | 프론트 구현 계획 반영: FE-03 선행에 FE-02 추가(Button·사진 배경 화면 재사용) |
 | 0.6 | 2026-10-02 | Claude Code | 드롭 위치 직접 배치(도메인 v1.0 OQ-34, PRD v1.1 Q-13) 반영: BE-12 드롭 배치 거리 검증, FE-13 드롭 위치 정하기 Task 추가, 결정 #10 |
 | 0.7 | 2026-10-02 | Claude Code | 프레임 방향 회전(PRD v1.2 Q-14) 반영: BE-13 주변 조회 응답 `heading`, FE-14 사진 먼저 → 위치·방향 정하기 Task 추가, 결정 #11 |
+| 1.3 | 2026-10-06 | Claude Code | BE-21 등급 개편(다이아·보관 기간), BE-22 신고·차단, BE-23 약관 제공 추가(모두 완료), 결정 #19. 테스트 243개 | 
 | 1.2 | 2026-10-04 | Claude Code | Google 로그인 백엔드 BE-20 추가(완료), 결정 #17 |
 | 1.1 | 2026-10-04 | Claude Code | 네이티브 홈·보관함(네이티브 PRD v0.8 FR-N12·FR-N13) 백엔드 Task 추가: BE-19 내 캡슐·보관함 목록 API(완료), 결정 #15 |
 | 1.0 | 2026-10-04 | Claude Code | 실증에서 정한 크기 저장(`13-capsule-dev-plan.md` 17장) 백엔드 Task 추가: DB-04 마이그레이션 003, BE-18 게시·주변 조회에 `size_m`, 결정 #14 |
@@ -1023,3 +1024,4 @@ v0.1의 확인 필요 9건을 아래와 같이 결정했다.
 | 16 | 앵커 ID·크기 저장 구현 (2026-10-04) | 마이그레이션 002·003을 만들고 게시(`cloud_anchor_id`, `size_m`, 둘 다 선택)와 주변 조회 응답에 반영했다(DB-03, DB-04, BE-15 일부, BE-18). `geo_pose`와 열람 요청의 `plane_match`(BE-15의 나머지, BE-16)는 Geospatial·열람 연결 때 한다. 백엔드 테스트 216개 통과 | DB-03, DB-04, BE-15, BE-18, ERD 1.6·1.7 |
 | 17 | Google 로그인 백엔드 (v1.2) | BE-20: `POST /api/auth/google { id_token, agree_* }`. 구글의 tokeninfo로 토큰을 확인하고(aud·iss·exp·email_verified), 연결된 계정 → 같은 이메일 계정에 연결 → 새 가입(동의 3개 필요, 없으면 400 CONSENT_REQUIRED) 순서. 오류 GOOGLE_AUTH_FAILED(401). 설정 `GOOGLE_CLIENT_ID`. 마이그레이션 005. 테스트 230개 통과 | 네이티브 PRD FR-N16, ERD 1.8 |
 | 18 | 앱 업데이트 배포 경로 (v1.2) | `GET /api/app/latest`, `GET /api/app/download`를 세션 없이 연다(로그인 전에도 확인해야 해서). 파일은 `backend/updates/`(gitignore)에서 읽어 서버를 다시 켜지 않아도 바뀐다. 개발용 임시 배포이며, 정식 출시는 스토어를 쓴다. 테스트 233개 통과 | 네이티브 실행 계획 결정 #11 |
+| 19 | 등급 개편·신고·차단·약관 (v1.3) | BE-21: 등급 BRONZE·SILVER(730일)·DIAMOND(평생), 마이그레이션 006. BE-22: `POST /api/capsules/:id/report`(사유 6종), `POST /api/capsules/:id/block-owner`, `GET /api/blocks`, `DELETE /api/blocks/:userId`, 주변 조회·보관함·열람에서 신고·차단 반영. BE-23: `GET /api/legal/:doc`(앱용 JSON)와 `/legal/:doc`(웹 페이지), 원문은 `backend/legal/*.md`, 로그인 없이 연다. 테스트 243개 통과 | 네이티브 PRD FR-N17·N18, ERD 1.9 |

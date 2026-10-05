@@ -7,6 +7,7 @@
 | 버전 | 일자 | 변경자 | 변경내용 |
 |---|---|---|---|
 | 0.1 | 2026-10-03 | Claude Code | 초안 작성 |
+| 1.0 | 2026-10-06 | Claude Code | AR 화면 코드를 역할별 파일로 나눔(`ArScreen`, `Capsule`, `CapsuleScene`, `ArWidgets`, `AnchorOps`, `ArMedia`, `ArNotice`), APP-17 신고·차단, APP-18 약관 화면, APP-19 앵커 정책 추가 |
 | 0.9 | 2026-10-04 | Claude Code | APP-16 Google 로그인 추가 |
 | 0.8 | 2026-10-04 | Claude Code | APP-15 지도의 보는 방향 표시와 AR 길찾기 추가(네이티브 PRD v1.0) |
 | 0.7 | 2026-10-04 | Claude Code | APP-14 내 캡슐 지도 추가(네이티브 PRD v0.9, osmdroid) |
@@ -519,3 +520,5 @@ N1 다음 단계인 N1.5(3D 캡슐 연출)의 요구사항과 일정은 `13-caps
 | 9 | 서버 캡슐 AR 표시 (2026-10-04) | "완료" 때 캡슐 자리를 클라우드 앵커로 자동 저장하고 그 ID·크기와 함께 서버에 게시한다. AR 화면은 켜져 있는 동안 주변 서버 캡슐을 15초마다 받아 가까운 순서로 30개까지 앵커를 찾아 띄운다(자리를 못 찾은 것은 그 자리를 비추면 나타난다). 실험용 "자리 저장"·"저장한 자리 찾기" 버튼과 폰 저장 앵커 ID는 없앴다. 서버에 앵커 없이 저장된 캡슐은 홈·지도에만 보인다 | APP-07~11 일부 |
 | 10 | 앱 두 가지(flavor) (2026-10-04) | **Drop 집**(`com.hyunboee.drop.home`, 서버 localhost + adb reverse)과 **Drop 밖**(`com.hyunboee.drop`, 터널 주소)을 한 폰에 함께 설치한다. 밖 앱은 기존 패키지 이름이라 클라우드 앵커 인증이 맞고, 집 앱은 새 패키지 이름이라 구글 클라우드에 OAuth 클라이언트 `Drop home debug`(Android, 패키지 `com.hyunboee.drop.home`, 같은 디버그 SHA-1)를 2026-10-04에 등록했다(반영에 몇 분이 걸릴 수 있다). 빌드: `gradlew assembleHomeDebug`, `assembleOutdoorDebug -PapiBaseUrl=터널주소`. 아이콘은 사용자가 준 이미지 | OPS-N01 |
 | 11 | 밖 앱의 앱 자체 업데이트 (2026-10-04) | 서버 `backend/updates/`에 설치 파일(`drop-outdoor.apk`)과 `latest.json`(버전, 변경사항, sha256)을 두고, 서버의 `GET /api/app/latest`(정보)·`/api/app/download`(파일, 로그인 없이)로 내려준다. 밖 앱(`IN_APP_UPDATE=true`)은 켤 때와 홈의 "업데이트 확인"에서 새 버전(versionCode가 더 큼)을 찾으면 안내 창 → 내려받기(sha256 확인) → 설치 화면으로 넘긴다. 설치 버튼은 사용자가 눌러야 하고, 처음 한 번 "출처를 알 수 없는 앱 설치"를 허용해야 한다. 새 버전 내기: `gradlew assembleOutdoorRelease -PapiBaseUrl=터널주소 -PappVersionCode=N -PappVersionName=x.y.z` 후 `python app/tools/publish_update.py <apk> N x.y.z "변경사항"`. 서버를 다시 켜지 않아도 바로 적용된다. 집 앱은 대상이 아니다 | OPS-N01, `8-plan.md` 결정 #18 |
+| 12 | AR 화면 코드 정리 (2026-10-06) | 실증 때 만든 1,176줄 단일 파일(`SpikeScreen.kt`)을 상태·흐름(`ArScreen.kt`), 캡슐·등급(`Capsule.kt`), 3D 장면(`CapsuleScene.kt`), 버튼·미니맵(`ArWidgets.kt`), 구글 앵커 정책(`AnchorOps.kt`), 사진(`ArMedia.kt`), 구글 안내(`ArNotice.kt`)로 나눴다. 동작은 바꾸지 않았고 앵커 정책에 단위 테스트를 붙였다 | APP-05~12 |
+| 13 | 구글 앵커 정책 (2026-10-06) | 저장: 스캔 품질이 충분해질 때까지 최대 20초(NP-04) 기다리며 안내, 한 번 최대 60초(NP-05), 한도 초과·서버 문제는 5초·10초 뒤, 주변 모습 부족은 2초 뒤 다시(최대 3번), 인증 오류는 바로 실패. 찾기: 캡슐 30m 안(NP-02)에서만 요청, 실패하면 15·30·60·120초로 느려지고 한도 초과 시 1분간 전체 중지. 앵커 보관은 브론즈 30일, 실버·다이아 365일(2년·평생은 연장 필요, `13-capsule-dev-plan.md` 19.3) | NFR-N05, NQ-05 |
