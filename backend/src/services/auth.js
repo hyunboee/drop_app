@@ -3,7 +3,7 @@ import { promisify } from 'node:util';
 import { withTransaction } from '../db.js';
 import { AppError } from '../errors.js';
 import { M_04_SESSION_TTL_SEC, M_05_LOGIN_LOCK_MS, M_05_LOGIN_MAX_FAILURES, TERMS_VERSION } from '../params.js';
-import { findUserByEmail, findUserById, insertUser } from '../repositories/users.js';
+import { findUserByEmail, findUserByGoogleSub, findUserById, insertUser, linkGoogleSub } from '../repositories/users.js';
 import { deleteExpiredSessions, deleteSession, insertSession } from '../repositories/sessions.js';
 
 const scryptAsync = promisify(scrypt);
@@ -83,7 +83,8 @@ export async function login({ pool, now }, { email, password }) {
   const normalized = email.toLowerCase();
   if (isLocked(normalized, now())) throw new AppError('ACCOUNT_LOCKED');
   const found = await findUserByEmail(pool, normalized);
-  const valid = found
+  // 구글로만 가입한 계정(비밀번호 없음)은 비밀번호 로그인이 안 된다
+  const valid = found?.password_hash
     ? await verifyPassword(password, found.password_salt, found.password_hash)
     : (await verifyPassword(password, DUMMY_SALT, DUMMY_HASH), false);
   if (!valid) {
@@ -97,6 +98,31 @@ export async function login({ pool, now }, { email, password }) {
     await insertSession(client, { userId: found.id, tokenHash, ttlSec: M_04_SESSION_TTL_SEC });
   });
   return { user: { id: found.id, email: found.email }, token };
+}
+
+// 구글 로그인: 이미 연결된 계정이면 로그인, 같은 이메일로 가입한 계정이 있으면 연결(구글이 이메일을 확인한 값만 믿는다),
+// 없으면 새로 가입한다. 새로 가입할 때는 약관 동의 3개가 있어야 한다
+export async function googleLogin({ pool, googleVerify }, { idToken, consents }) {
+  if (!googleVerify) throw new AppError('GOOGLE_AUTH_FAILED');
+  const claims = await googleVerify(idToken);
+  const { token, tokenHash } = createSessionToken();
+  return withTransaction(pool, async (client) => {
+    let created = false;
+    let user = await findUserByGoogleSub(client, claims.sub);
+    if (!user) {
+      user = await findUserByEmail(client, claims.email);
+      if (user) {
+        await linkGoogleSub(client, user.id, claims.sub);
+      } else {
+        if (!consents) throw new AppError('CONSENT_REQUIRED');
+        user = await insertUser(client, { email: claims.email, googleSub: claims.sub, termsVersion: TERMS_VERSION });
+        created = true;
+      }
+    }
+    await deleteExpiredSessions(client, user.id);
+    await insertSession(client, { userId: user.id, tokenHash, ttlSec: M_04_SESSION_TTL_SEC });
+    return { user: { id: user.id, email: user.email }, token, created };
+  });
 }
 
 export async function logout({ pool }, sessionId) {

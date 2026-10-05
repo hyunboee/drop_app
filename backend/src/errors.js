@@ -5,6 +5,8 @@ export const ERRORS = {
   EMAIL_TAKEN: { status: 409, message: '이미 가입된 이메일이에요' },
   VALIDATION_FAILED: { status: 400, message: '입력값을 확인해 주세요' },
   GRADE_NOT_ALLOWED: { status: 400, message: '지금은 브론즈·실버 등급만 드롭할 수 있어요' },
+  GOOGLE_AUTH_FAILED: { status: 401, message: 'Google 로그인을 확인하지 못했어요. 다시 시도해 주세요' },
+  CONSENT_REQUIRED: { status: 400, message: '처음 가입하려면 약관 동의가 필요해요' },
   LOW_ACCURACY: { status: 422, message: '위치 정확도가 낮아요. 잠시 후 다시 시도해 주세요' },
   DROP_TOO_FAR: { status: 422, message: '내 위치에서 10m 안에만 놓을 수 있어요. 위치를 다시 정해 주세요' },
   OUT_OF_RANGE: { status: 403, message: '캡슐에 더 가까이 가야 열 수 있어요' },

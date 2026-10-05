@@ -7,8 +7,10 @@ export async function startApp({
   moderation = createFakeModeration(),
   now = Date.now,
   ipHashSecret = process.env.IP_HASH_SECRET,
+  googleVerify,
+  updatesDir,
 } = {}) {
-  const app = createApp({ pool, storage, moderation, ipHashSecret, now });
+  const app = createApp({ pool, storage, moderation, ipHashSecret, googleVerify, updatesDir, now });
   const server = await new Promise((resolve) => {
     const s = app.listen(0, () => resolve(s));
   });

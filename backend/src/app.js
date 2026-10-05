@@ -4,13 +4,14 @@ import { AppError, errorBody } from './errors.js';
 import { writeLog } from './lib/log.js';
 import { requireSession } from './middleware/auth.js';
 import { createPublicAuthRouter, createSessionAuthRouter } from './routes/auth.js';
+import { createAppUpdateRouter } from './routes/appUpdate.js';
 import { createCapsulesRouter } from './routes/capsules.js';
 import { createHealthRouter } from './routes/health.js';
 import { createMediaRouter } from './routes/media.js';
 import { createUploadsRouter } from './routes/uploads.js';
 
-export function createApp({ pool, storage, moderation, ipHashSecret, now = Date.now }) {
-  const deps = { pool, storage, moderation, ipHashSecret, now };
+export function createApp({ pool, storage, moderation, ipHashSecret, googleVerify, updatesDir = join(import.meta.dirname, '../updates'), now = Date.now }) {
+  const deps = { pool, storage, moderation, ipHashSecret, googleVerify, updatesDir, now };
   const app = express();
 
   // Cloudflare 한 단계 뒤 (X-Forwarded-For 가장 오른쪽 값)
@@ -37,6 +38,7 @@ export function createApp({ pool, storage, moderation, ipHashSecret, now = Date.
 
   app.use(createHealthRouter(deps));
   app.use('/api/auth', createPublicAuthRouter(deps));
+  app.use('/api/app', createAppUpdateRouter(deps));
   app.use('/api', requireSession(deps));
   app.use('/api', createSessionAuthRouter(deps));
   app.use('/api/uploads', createUploadsRouter(deps));

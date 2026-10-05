@@ -21,6 +21,7 @@ test('BE-01 필수 환경 변수가 모두 있으면 설정을 읽는다', () =>
     awsRegion: 'ap-northeast-2',
     s3Bucket: 'drop-bucket',
     ipHashSecret: 'hmac-secret-value',
+    googleClientId: undefined,
   });
 });
 

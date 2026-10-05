@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { AppError } from '../errors.js';
 import { M_04_SESSION_TTL_SEC, M_10_PASSWORD_MIN_LENGTH } from '../params.js';
-import { getMe, login, logout, signup } from '../services/auth.js';
+import { getMe, googleLogin, login, logout, signup } from '../services/auth.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const COOKIE_ATTRS = 'HttpOnly; Secure; SameSite=Strict; Path=/';
@@ -53,6 +53,14 @@ export function createPublicAuthRouter(deps) {
     res.locals.logEmail = email;
     const { user, token } = await login(deps, { email, password });
     sendSession(req, res, 200, user, token);
+  });
+
+  router.post('/google', async (req, res) => {
+    const { id_token, agree_terms, agree_location, agree_age } = bodyOf(req);
+    if (typeof id_token !== 'string' || id_token === '' || id_token.length > 4096) throw new AppError('VALIDATION_FAILED');
+    const consents = agree_terms === true && agree_location === true && agree_age === true;
+    const { user, token, created } = await googleLogin(deps, { idToken: id_token, consents });
+    sendSession(req, res, created ? 201 : 200, user, token);
   });
 
   return router;

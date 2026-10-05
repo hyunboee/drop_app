@@ -10,5 +10,6 @@ export function loadConfig(env = process.env) {
     awsRegion: env.AWS_REGION,
     s3Bucket: env.S3_BUCKET,
     ipHashSecret: env.IP_HASH_SECRET,
+    googleClientId: env.GOOGLE_CLIENT_ID, // 선택. 없으면 구글 로그인은 실패 처리된다
   };
 }
