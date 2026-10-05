@@ -8,8 +8,12 @@ export const PRM_03_REMEASURE_ACCURACY_M = 30;
 export const PRM_20_DROP_PLACE_RADIUS_M = 10;
 // PRM-06 브론즈 유효 시간 (30일)
 export const PRM_06_BRONZE_TTL_HOURS = 720;
-// PRM-06 실버 유효 시간 (365일, 실험용 허용. 결제 없이 저장됨)
-export const PRM_06_SILVER_TTL_HOURS = 8760;
+// PRM-06 실버 유효 시간 (2년 = 730일, 실험용 허용. 결제 없이 저장됨). 다이아는 평생(만료 없음)
+export const PRM_06_SILVER_TTL_HOURS = 17520;
+// 신고 사유 (reports.reason CHECK와 같다)
+export const REPORT_REASONS = ['ABUSE', 'SEXUAL', 'VIOLENCE', 'PRIVACY', 'COPYRIGHT', 'OTHER'];
+// 신고 상세 설명 최대 길이
+export const REPORT_DETAIL_MAX_LENGTH = 500;
 // M-01 주변 조회 반경
 export const M_01_NEARBY_RADIUS_M = 200;
 // M-03 업로드 Presigned URL 유효 시간 (5분)

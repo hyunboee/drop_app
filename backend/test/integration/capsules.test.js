@@ -230,13 +230,31 @@ test('BE-06 본문이 객체가 아니면 400 VALIDATION_FAILED', async (t) => {
   assertError(await request(url, '/api/capsules', { method: 'POST', cookie: user.cookie }), 400, 'VALIDATION_FAILED');
 });
 
-test('실험: grade SILVER는 201이고 유효 기간이 365일이다', async (t) => {
+test('등급별 보관 기간: 브론즈 30일, 실버 2년(730일), 다이아 평생(infinity)', async (t) => {
   const { url } = await start(t);
   const user = await loggedIn();
-  const body = capsuleBody({ grade: 'SILVER' });
-  assert.equal((await publish(url, user.cookie, body)).status, 201);
-  const { rows } = await pool.query("SELECT grade, expires_at - published_at = interval '365 days' AS ok FROM capsules WHERE media_id = $1", [body.media_id]);
-  assert.deepEqual(rows[0], { grade: 'SILVER', ok: true });
+  for (const [grade, check] of [
+    ['BRONZE', "expires_at - published_at = interval '30 days'"],
+    ['SILVER', "expires_at - published_at = interval '730 days'"],
+    ['DIAMOND', "expires_at = 'infinity'"],
+  ]) {
+    const body = capsuleBody({ grade });
+    assert.equal((await publish(url, user.cookie, body)).status, 201, grade);
+    const { rows } = await pool.query(`SELECT grade, ${check} AS ok FROM capsules WHERE media_id = $1`, [body.media_id]);
+    assert.deepEqual(rows[0], { grade, ok: true });
+  }
+});
+
+test('다이아 캡슐은 응답의 expires_at이 null이고, 내 캡슐 목록에도 null로 나온다', async (t) => {
+  const { url } = await start(t);
+  const user = await loggedIn();
+  const body = capsuleBody({ grade: 'DIAMOND' });
+  const res = await publish(url, user.cookie, body);
+  assert.equal(res.status, 201);
+  assert.equal(res.body.expires_at, null);
+  const mine = await request(url, '/api/capsules/mine', { cookie: user.cookie });
+  assert.equal(mine.body.capsules[0].grade, 'DIAMOND');
+  assert.equal(mine.body.capsules[0].expires_at, null);
 });
 
 test('BE-06 grade: MASTER 같은 그 밖의 등급은 400 GRADE_NOT_ALLOWED', async (t) => {

@@ -55,7 +55,7 @@ export function createCapsulesRouter(deps) {
     ) {
       throw new AppError('VALIDATION_FAILED');
     }
-    if (grade !== 'BRONZE' && grade !== 'SILVER') throw new AppError('GRADE_NOT_ALLOWED');
+    if (!['BRONZE', 'SILVER', 'DIAMOND'].includes(grade)) throw new AppError('GRADE_NOT_ALLOWED');
     const { created, capsule } = await publishCapsule(deps, {
       userId: req.userId, mediaId: media_id, title, grade, lat, lng, accuracy, heading, userLat: user_lat, userLng: user_lng,
       cloudAnchorId: cloud_anchor_id ?? null, sizeM: size_m ?? XP_02_SIZE_M_DEFAULT,

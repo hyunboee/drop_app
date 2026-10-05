@@ -7,10 +7,12 @@ import { createPublicAuthRouter, createSessionAuthRouter } from './routes/auth.j
 import { createAppUpdateRouter } from './routes/appUpdate.js';
 import { createCapsulesRouter } from './routes/capsules.js';
 import { createHealthRouter } from './routes/health.js';
+import { createLegalRouters } from './routes/legal.js';
 import { createMediaRouter } from './routes/media.js';
+import { createSafetyRouter } from './routes/safety.js';
 import { createUploadsRouter } from './routes/uploads.js';
 
-export function createApp({ pool, storage, moderation, ipHashSecret, googleVerify, updatesDir = join(import.meta.dirname, '../updates'), now = Date.now }) {
+export function createApp({ pool, storage, moderation, ipHashSecret, googleVerify, updatesDir = join(import.meta.dirname, '../updates'), legalDir = join(import.meta.dirname, '../legal'), now = Date.now }) {
   const deps = { pool, storage, moderation, ipHashSecret, googleVerify, updatesDir, now };
   const app = express();
 
@@ -37,10 +39,14 @@ export function createApp({ pool, storage, moderation, ipHashSecret, googleVerif
   app.use(express.json());
 
   app.use(createHealthRouter(deps));
+  const legal = createLegalRouters({ legalDir });
+  app.use('/legal', legal.web);
+  app.use('/api/legal', legal.api);
   app.use('/api/auth', createPublicAuthRouter(deps));
   app.use('/api/app', createAppUpdateRouter(deps));
   app.use('/api', requireSession(deps));
   app.use('/api', createSessionAuthRouter(deps));
+  app.use('/api', createSafetyRouter(deps));
   app.use('/api/uploads', createUploadsRouter(deps));
   app.use('/api/capsules', createCapsulesRouter(deps));
   app.use('/api/media', createMediaRouter(deps));

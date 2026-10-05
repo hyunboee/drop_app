@@ -43,9 +43,9 @@ test('DB-01 001_init.sql이 docs/schema.sql과 바이트 단위로 같다', asyn
 });
 
 test('DB-01 빈 DB에 migrate 적용 후 5개 테이블과 2개 인덱스가 존재한다', async () => {
-  await pool.query('DROP TABLE IF EXISTS view_records, capsules, sessions, users, schema_migrations CASCADE');
+  await pool.query('DROP TABLE IF EXISTS reports, blocks, view_records, capsules, sessions, users, schema_migrations CASCADE');
   const applied = await migrate(pool);
-  assert.deepEqual(applied, ['001_init.sql', '002_native_anchor.sql', '003_capsule_size.sql', '004_silver_grade.sql', '005_google_login.sql']);
+  assert.deepEqual(applied, ['001_init.sql', '002_native_anchor.sql', '003_capsule_size.sql', '004_silver_grade.sql', '005_google_login.sql', '006_grades_safety.sql']);
 
   for (const t of TABLES) {
     const { rows } = await pool.query('SELECT to_regclass($1) AS r', [t]);

@@ -9,7 +9,7 @@ export async function findCapsuleByMediaId(db, mediaId) {
 export async function insertCapsule(db, { userId, mediaId, title, grade, lat, lng, accuracy, heading, cloudAnchorId, sizeM, ttlHours }) {
   const { rows } = await db.query(
     `INSERT INTO capsules (user_id, media_id, title, grade, lat, lng, accuracy, heading, cloud_anchor_id, size_m, expires_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $10, $11, now() + $9 * interval '1 hour')
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $10, $11, COALESCE(now() + $9::double precision * interval '1 hour', 'infinity'::timestamptz))
      RETURNING id, expires_at`,
     [userId, mediaId, title, grade, lat, lng, accuracy, heading, ttlHours, cloudAnchorId, sizeM],
   );
@@ -22,6 +22,8 @@ export async function findNearbyCapsules(db, { box, center, radiusM, earthRadius
      FROM capsules
      WHERE lat BETWEEN $1 AND $2 AND lng BETWEEN $3 AND $4
        AND status = 'ACTIVE' AND expires_at > now()
+       AND user_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = $9)
+       AND NOT EXISTS (SELECT 1 FROM reports r WHERE r.capsule_id = capsules.id AND r.reporter_id = $9)
        AND 2 * $5::double precision * asin(least(1, sqrt(
              power(sin(radians(lat - $6) / 2), 2)
              + cos(radians($6)) * cos(radians(lat)) * power(sin(radians(lng - $7) / 2), 2)
@@ -50,11 +52,25 @@ export async function findOpenedCapsules(db, userId) {
     `SELECT c.id, c.title, c.media_id, max(v.viewed_at) AS opened_at
      FROM view_records v JOIN capsules c ON c.id = v.capsule_id
      WHERE v.user_id = $1 AND c.status = 'ACTIVE' AND c.expires_at > now()
+       AND c.user_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = $1)
+       AND NOT EXISTS (SELECT 1 FROM reports r WHERE r.capsule_id = c.id AND r.reporter_id = $1)
      GROUP BY c.id
      ORDER BY opened_at DESC`,
     [userId],
   );
   return rows;
+}
+
+// 이 사용자가 차단했거나 신고해서 볼 수 없는 캡슐인가 (열람을 막는 데 쓴다)
+export async function isHiddenFrom(db, capsuleId, userId) {
+  const { rows } = await db.query(
+    `SELECT (
+       EXISTS (SELECT 1 FROM capsules c JOIN blocks b ON b.blocked_id = c.user_id WHERE c.id = $1 AND b.blocker_id = $2)
+       OR EXISTS (SELECT 1 FROM reports r WHERE r.capsule_id = $1 AND r.reporter_id = $2)
+     ) AS hidden`,
+    [capsuleId, userId],
+  );
+  return rows[0].hidden;
 }
 
 export async function findActiveCapsuleById(db, id) {

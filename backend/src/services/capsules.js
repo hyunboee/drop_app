@@ -10,6 +10,7 @@ import {
   findNearbyCapsules,
   findOpenedCapsules,
   insertCapsule,
+  isHiddenFrom,
   markCapsuleDeleted,
   updateCapsuleLook,
 } from '../repositories/capsules.js';
@@ -22,6 +23,12 @@ export function hashIp(secret, ip) {
 function existingResult(existing, userId) {
   if (existing.user_id !== userId) throw new AppError('MEDIA_ALREADY_USED');
   return { created: false, capsule: { id: existing.id, expires_at: existing.expires_at } };
+}
+
+// 등급별 보관 시간(시간). 다이아는 null(평생: 만료 시각 'infinity')
+export function ttlHoursOf(grade) {
+  if (grade === 'DIAMOND') return null;
+  return grade === 'SILVER' ? PRM_06_SILVER_TTL_HOURS : PRM_06_BRONZE_TTL_HOURS;
 }
 
 export async function publishCapsule(
@@ -57,7 +64,7 @@ export async function publishCapsule(
 
   try {
     const capsule = await insertCapsule(pool, {
-      userId, mediaId, title, grade, lat, lng, accuracy, heading, cloudAnchorId, sizeM, ttlHours: grade === 'SILVER' ? PRM_06_SILVER_TTL_HOURS : PRM_06_BRONZE_TTL_HOURS,
+      userId, mediaId, title, grade, lat, lng, accuracy, heading, cloudAnchorId, sizeM, ttlHours: ttlHoursOf(grade),
     });
     return { created: true, capsule };
   } catch (err) {
@@ -99,7 +106,7 @@ export async function listArchive({ pool }, { userId }) {
 // MVP 단순화(Q-11): 평면 일치·이동 속도·무결성·유효 시간 생략
 export async function openCapsule({ pool, ipHashSecret }, { userId, capsuleId, lat, lng, accuracy, ip }) {
   const capsule = await findActiveCapsuleById(pool, capsuleId);
-  if (!capsule) throw new AppError('CAPSULE_NOT_FOUND');
+  if (!capsule || (await isHiddenFrom(pool, capsuleId, userId))) throw new AppError('CAPSULE_NOT_FOUND');
   if (isLowAccuracy(accuracy)) throw new AppError('LOW_ACCURACY');
   const { allowed, remainingM } = judgeOpen(distanceM({ lat, lng }, capsule), accuracy);
   if (!allowed) throw new AppError('OUT_OF_RANGE', { remaining_m: remainingM });
