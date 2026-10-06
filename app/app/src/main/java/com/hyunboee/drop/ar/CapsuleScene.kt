@@ -144,6 +144,8 @@ private fun NodeScope.CapsuleBox(
     // (재질을 바꿔 끼우지 않으려고 색마다 원판을 따로 두고 하나만 보이게 한다)
     val bodyModel = rememberModelInstance(modelLoader, bodyModelFile(item.grade))
     val lidModel = rememberModelInstance(modelLoader, lidModelFile(item.grade))
+    // 다이아는 보석 면이 몸통 파일에서 검게 나와 따로 둔 파일을 몸통 위치에 겹쳐 놓는다
+    val shellModel = if (item.grade == DIAMOND) rememberModelInstance(modelLoader, "models/capsule_diamond_shell.glb") else null
     val stateColors = listOf(UiColor(0xFF6B5A3A), UiColor(0xFFE9D39A), UiColor(0xFF1E6BFF), UiColor(0xFF9A9A9A))
     val stateMats = remember { stateColors.map { materialLoader.createUnlitColorInstance(it) } }
     val glowMats = remember { List(9) { materialLoader.createUnlitColorInstance(UiColor(0xFFFFF4C2)) } }
@@ -166,6 +168,7 @@ private fun NodeScope.CapsuleBox(
         )
     }
     bodyModel?.let { ModelNode(modelInstance = it, position = Position(y = baseY)) }
+    shellModel?.let { ModelNode(modelInstance = it, position = Position(y = baseY)) }
     // 열리면 뚜껑이 위로 들리며 뒤로 젖혀진다
     lidModel?.let {
         ModelNode(modelInstance = it, position = Position(y = baseY + 0.323f + 0.18f * open, z = -0.10f * open), rotation = Rotation(x = -60f * open))

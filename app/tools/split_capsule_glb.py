@@ -18,6 +18,7 @@ OUT = Path(__file__).resolve().parents[1] / 'app/src/main/assets/models'
 LIFT = {'label': 0.003, 'glass': 0.004}
 # 앱의 AR 화면에서 반투명(BLEND) 유리가 불투명한 검은 판처럼 그려져 글자판을 가리는 것으로 보여 뺀다
 DROP = {'glass'}
+UNLIT = {'label', 'diamond'}
 # 앱(Filament)이 지원하지 않는 재질 확장은 뺀다. 지원하는 것(ior 등)은 남긴다
 UNSUPPORTED_EXTENSIONS = {'KHR_materials_iridescence'}
 TEX_KEYS = ('baseColorTexture', 'metallicRoughnessTexture', 'normalTexture', 'occlusionTexture', 'emissiveTexture')
@@ -62,19 +63,22 @@ def lift_thin_surfaces(doc, blob, mesh):
         pos['min'], pos['max'] = p.min(axis=0).tolist(), p.max(axis=0).tolist()
 
 
-def extract(doc, blob, node_name, path):
+def extract(doc, blob, node_name, path, skip=(), keep=None):
     node = next(n for n in doc['nodes'] if n.get('name') == node_name)
     mesh = json.loads(json.dumps(doc['meshes'][node['mesh']]))
     lift_thin_surfaces(doc, blob, mesh)
-    mesh['primitives'] = [p for p in mesh['primitives'] if doc['materials'][p['material']].get('name') not in DROP]
+    mesh['primitives'] = [
+        p for p in mesh['primitives']
+        if doc['materials'][p['material']].get('name') not in DROP | set(skip) and (keep is None or doc['materials'][p['material']].get('name') in keep)
+    ]
 
     # 쓰이는 접근자·재질을 모은다
     acc_used = sorted({a for p in mesh['primitives'] for a in [*p['attributes'].values(), p['indices']]})
     mat_used = sorted({p['material'] for p in mesh['primitives']})
     materials = [json.loads(json.dumps(doc['materials'][m])) for m in mat_used]
     for m in materials:
-        if m.get('name') == 'label':
-            # AR 화면은 주변이 어두우면 조명이 약해 글자가 묻힌다. 글자판은 조명을 받지 않고 이미지 색 그대로 보이게 한다
+        if m.get('name') in UNLIT:
+            # AR 화면은 주변이 어두우면 조명이 약해 글자·보석 색이 묻힌다. 조명을 받지 않고 이미지 색 그대로 보이게 한다
             m['extensions'] = {'KHR_materials_unlit': {}}
             m.pop('emissiveTexture', None)
             m.pop('emissiveFactor', None)
@@ -161,6 +165,11 @@ if __name__ == '__main__':
     doc, blob = read_glb(sys.argv[1])
     OUT.mkdir(parents=True, exist_ok=True)
     name = sys.argv[2] if len(sys.argv) > 2 else 'capsule'
-    body = extract(doc, blob, 'Body', OUT / f'{name}_body.glb')
+    if name == 'capsule':
+        body = extract(doc, blob, 'Body', OUT / f'{name}_body.glb')
+    else:
+        # 보석 면은 이미지가 붙은 몸통 파일에서 검게 나와, 뚜껑처럼 따로 파일로 둔다
+        body = extract(doc, blob, 'Body', OUT / f'{name}_body.glb', skip=('diamond',))
+        extract(doc, blob, 'Body', OUT / f'{name}_shell.glb', keep=('diamond',))
     lid = extract(doc, blob, 'Lid', OUT / f'{name}_lid.glb')
     print('뚜껑이 몸통 위에 놓이던 높이(m):', lid.get('translation', [0, 0, 0])[1])
